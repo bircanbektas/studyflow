@@ -129,6 +129,9 @@ def index():
     return send_from_directory("static", "index.html")
 
 if __name__ == "__main__":
-    print("\n🌊 StudyFlow başlatılıyor...")
-    print("👉 Tarayıcında aç: http://localhost:5000\n")
-    app.run(host="0.0.0.0", port=8080, debug=False)
+    # Railway'in atadığı portu alıyoruz, eğer yereldeysen 8080'i kullanıyoruz.
+    port = int(os.environ.get("PORT", 8080))
+    
+    print(f"\n🌊 StudyFlow başlatılıyor... Port: {port}")
+    # port=8080 yerine port=port değişkenini yazdık
+    app.run(host="0.0.0.0", port=port, debug=False)
