@@ -96,7 +96,18 @@ else:
         if username in data:
             data[username]["active"] = None
             save(data)
-
+            
+@app.route("/health")
+def health():
+    try:
+        conn = get_conn()
+        cur = conn.cursor()
+        cur.execute("SELECT 1")
+        cur.close()
+        conn.close()
+        return "ok", 200
+    except Exception as e:
+        return f"db error: {e}", 500
 
 @app.route("/api/users", methods=["GET"])
 def get_users():
