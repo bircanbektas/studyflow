@@ -15,4 +15,3 @@
 - `index.html`: uygulamanın tamamı (GitHub Pages'ten yayınlanır)
 - Firebase Authentication (e-posta/şifre) + Firestore, proje: `studyflow-c0ed6`
 - `firestore.rules`: güvenlik kuralları; değişince Firebase Console > Firestore > Rules'a yapıştırılır
-- `server.py`: sadece eski Render adresini yeni siteye yönlendirir
