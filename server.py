@@ -43,6 +43,7 @@ if DATABASE_URL:
             )
         """)
         run("ALTER TABLE user_data ADD COLUMN IF NOT EXISTS password_hash TEXT")
+        run("ALTER TABLE user_data ADD COLUMN IF NOT EXISTS settings JSONB DEFAULT '{}'")
         run("""
             CREATE TABLE IF NOT EXISTS auth_tokens (
                 token TEXT PRIMARY KEY,
@@ -57,12 +58,13 @@ if DATABASE_URL:
         run("SELECT 1")
 
     def db_get_all():
-        rows = run("SELECT username, sessions, subjects, active FROM user_data", fetch="all")
+        rows = run("SELECT username, sessions, subjects, active, settings FROM user_data", fetch="all")
         return {
             row["username"]: {
                 "sessions": row["sessions"] or {},
                 "subjects": row["subjects"] or {},
                 "active": row["active"],
+                "settings": row["settings"] or {},
             }
             for row in rows
         }
@@ -79,7 +81,7 @@ if DATABASE_URL:
         """, (username, password_hash, password_hash))
 
     def db_upsert(username, field, value):
-        assert field in ("sessions", "subjects", "active")
+        assert field in ("sessions", "subjects", "active", "settings")
         run(f"""
             INSERT INTO user_data (username, {field}, updated_at)
             VALUES (%s, %s, NOW())
@@ -135,6 +137,7 @@ else:
                 "sessions": u.get("sessions") or {},
                 "subjects": u.get("subjects") or {},
                 "active": u.get("active"),
+                "settings": u.get("settings") or {},
             }
             for name, u in load()["users"].items()
         }
@@ -252,6 +255,12 @@ def set_subjects(username):
     db_upsert(username, "subjects", request.json)
     return jsonify({"ok": True})
 
+@app.route("/api/users/<username>/settings", methods=["POST"])
+@require_auth
+def set_settings(username):
+    db_upsert(username, "settings", request.json)
+    return jsonify({"ok": True})
+
 @app.route("/api/users/<username>/active", methods=["POST"])
 @require_auth
 def set_active(username):
@@ -269,6 +278,11 @@ def clear_active(username):
 @app.route("/")
 def index():
     return send_from_directory("static", "index.html")
+
+@app.route("/sw.js")
+def service_worker():
+    # Kök adresten sunulmalı ki tüm siteyi kapsasın
+    return send_from_directory("static", "sw.js", mimetype="application/javascript")
 
 if __name__ == "__main__":
     # Render/Railway'in atadığı portu alıyoruz, yereldeysen 8080'i kullanıyoruz.

@@ -4,6 +4,14 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>StudyFlow 🌊</title>
+  <meta name="theme-color" content="#031428" />
+  <link rel="manifest" href="/static/manifest.webmanifest" />
+  <link rel="icon" href="/static/icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="/static/apple-touch-icon.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="StudyFlow" />
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: #020d18; color: #cce7f5; font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; background-image: radial-gradient(ellipse at 20% 50%, #031a2e 0%, #020d18 60%); }
@@ -61,7 +69,7 @@
     .delete-btn:hover { color: #ff6b6b; }
 
     /* STATS */
-    .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px; }
+    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
     .stat-card { background: #031525; border-radius: 12px; padding: 16px; text-align: center; border: 1px solid #0a3a5c; }
     .stat-num { font-size: 22px; font-weight: 700; color: #48CAE4; }
     .stat-label { font-size: 12px; color: #2a5a7c; margin-top: 4px; }
@@ -121,6 +129,63 @@
     .logout-btn { background: transparent; border: 1px solid #0a3a5c; color: #4a7a9b; border-radius: 20px; padding: 3px 10px; cursor: pointer; font-size: 12px; }
     .logout-btn:hover { color: #ff6b6b; border-color: #ff6b6b; }
 
+    /* DAY NAV / STREAK / GOAL */
+    .day-nav { display: flex; align-items: center; gap: 8px; }
+    .day-nav-btn { background: #031525; border: 1px solid #0a3a5c; color: #90E0EF; border-radius: 8px; width: 32px; height: 32px; cursor: pointer; font-size: 16px; flex-shrink: 0; }
+    .day-nav-btn:hover:not(:disabled) { border-color: #0096C7; }
+    .day-nav-btn:disabled { opacity: 0.3; cursor: default; }
+    .today-link { background: transparent; border: none; color: #48CAE4; cursor: pointer; font-size: 12px; text-decoration: underline; }
+    .streak-badge { font-size: 14px; font-weight: 700; color: #ffb347; background: #1a1205; border: 1px solid #5c3a0a; padding: 6px 12px; border-radius: 20px; white-space: nowrap; }
+    .streak-badge.cold { color: #4a7a9b; background: #031525; border-color: #0a3a5c; }
+    .goal-wrap { margin-bottom: 20px; }
+    .goal-text { display: flex; justify-content: space-between; font-size: 12px; color: #4a7a9b; margin-bottom: 6px; gap: 8px; }
+    .goal-text b { color: #90E0EF; }
+    .goal-track { height: 10px; background: #031a2e; border-radius: 6px; overflow: hidden; border: 1px solid #0a3a5c; }
+    .goal-fill { height: 100%; background: linear-gradient(90deg, #0077B6, #48CAE4); border-radius: 6px; transition: width 0.5s; }
+    .goal-fill.done { background: linear-gradient(90deg, #2a9d8f, #7ae582); }
+    .goal-form { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; background: #031525; border-radius: 12px; padding: 16px; margin-bottom: 24px; border: 1px solid #0a3a5c; }
+    .goal-form label { font-size: 12px; color: #4a7a9b; display: flex; flex-direction: column; gap: 6px; }
+    .goal-form .input { width: 120px; margin-bottom: 0; }
+
+    /* SESSION FORM */
+    .log-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .log-header .log-title { margin-bottom: 0; }
+    .session-form { background: #031525; border-radius: 12px; padding: 16px; margin-bottom: 12px; border: 1px solid #0096C7; }
+    .session-form-title { font-size: 14px; font-weight: 600; color: #90E0EF; margin-bottom: 12px; }
+    .session-form-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 10px; }
+    .session-form-grid label { font-size: 12px; color: #4a7a9b; display: flex; flex-direction: column; gap: 6px; }
+    .session-form-grid .input { margin-bottom: 0; color-scheme: dark; }
+    .session-form-actions { display: flex; gap: 8px; margin-top: 12px; align-items: center; flex-wrap: wrap; }
+    .cancel-btn { background: transparent; border: 1px solid #0a3a5c; color: #4a7a9b; border-radius: 8px; padding: 8px 16px; cursor: pointer; font-size: 13px; }
+    .form-error { font-size: 13px; color: #ff6b6b; }
+    .session-row { cursor: pointer; }
+    .session-row:hover { border-color: #0077B6; }
+    .session-manual { font-size: 11px; color: #4a7a9b; border: 1px solid #0a3a5c; border-radius: 6px; padding: 0 5px; margin-left: 6px; font-weight: 400; }
+    .friend-streak { font-size: 12px; color: #ffb347; margin-left: 4px; }
+
+    /* MOBILE */
+    @media (max-width: 600px) {
+      .header { padding: 10px 12px; }
+      .active-bar { width: 100%; justify-content: space-between; padding: 8px 10px; }
+      .active-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .nav { padding: 8px 12px; overflow-x: auto; scrollbar-width: none; }
+      .nav::-webkit-scrollbar { display: none; }
+      .nav-btn { white-space: nowrap; padding: 8px 10px; }
+      .content { padding: 14px 12px 40px; }
+      .subject-grid { grid-template-columns: repeat(2, 1fr); }
+      .subject-btn { padding: 16px 8px; font-size: 13px; }
+      .timeline-hour:nth-child(3n+2), .timeline-hour:nth-child(3n+3) { display: none; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .bar-label { width: 100px; font-size: 12px; overflow: hidden; }
+      .bar-dur { width: 70px; }
+      .day-label { width: 60px; }
+      .day-bar { overflow: hidden; }
+      .session-form-grid { grid-template-columns: 1fr 1fr; }
+      .session-form-grid label:first-child { grid-column: 1 / -1; }
+      .delete-btn { font-size: 24px; padding: 0 8px; }
+      .login-card { margin: 0 16px; padding: 32px 20px; }
+    }
+
     @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
     @keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0; } }
 
@@ -172,10 +237,17 @@
     <div id="view-today">
       <div class="section-header">
         <div>
-          <div class="section-title" id="todayTitle"></div>
-          <div class="section-sub">Toplam: <b id="todayTotal" style="color:#48CAE4">0sn</b></div>
+          <div class="day-nav">
+            <button class="day-nav-btn" onclick="shiftDay(-1)" title="Önceki gün">‹</button>
+            <div class="section-title" id="todayTitle" style="margin:0"></div>
+            <button class="day-nav-btn" id="nextDayBtn" onclick="shiftDay(1)" title="Sonraki gün">›</button>
+          </div>
+          <div class="section-sub" style="margin-top:6px">Toplam: <b id="todayTotal" style="color:#48CAE4">0sn</b>
+            <button class="today-link hidden" id="backToToday" onclick="goToday()">bugüne dön</button></div>
         </div>
+        <span class="streak-badge" id="streakBadge"></span>
       </div>
+      <div class="goal-wrap" id="dayGoal"></div>
       <div class="subject-grid" id="subjectGrid"></div>
       <div class="timeline-wrap">
         <div class="timeline-title">Zaman Çizelgesi</div>
@@ -183,7 +255,23 @@
           <div class="timeline-bar" id="timelineBar"></div>
         </div>
       </div>
-      <div class="log-title">Oturumlar</div>
+      <div class="log-header">
+        <div class="log-title">Oturumlar <span style="font-size:12px">(düzenlemek için tıkla)</span></div>
+        <button class="add-btn" onclick="openSessionForm()">+ Elle ekle</button>
+      </div>
+      <div class="session-form hidden" id="sessionForm">
+        <div class="session-form-title" id="sessionFormTitle">Oturum ekle</div>
+        <div class="session-form-grid">
+          <label>Ders<select class="input" id="sfSubject"></select></label>
+          <label>Başlangıç<input class="input" type="time" id="sfStart" /></label>
+          <label>Bitiş<input class="input" type="time" id="sfEnd" /></label>
+        </div>
+        <div class="session-form-actions">
+          <button class="add-btn" onclick="saveSessionForm()">Kaydet</button>
+          <button class="cancel-btn" onclick="closeSessionForm()">Vazgeç</button>
+          <span class="form-error" id="sfError"></span>
+        </div>
+      </div>
       <div id="sessionLog"></div>
     </div>
 
@@ -194,6 +282,15 @@
         <div class="stat-card"><div class="stat-num" id="statTotal">—</div><div class="stat-label">Toplam</div></div>
         <div class="stat-card"><div class="stat-num" id="statToday">—</div><div class="stat-label">Bugün</div></div>
         <div class="stat-card"><div class="stat-num" id="statCount">—</div><div class="stat-label">Oturum</div></div>
+        <div class="stat-card"><div class="stat-num" id="statBestStreak">—</div><div class="stat-label">En uzun seri</div></div>
+      </div>
+      <div class="section-title">Hedefler</div>
+      <div class="goal-wrap" id="weekGoal"></div>
+      <div class="goal-form">
+        <label>Günlük hedef (saat)<input class="input" type="number" id="dailyGoalInput" min="0" max="24" step="0.5" placeholder="örn. 4" /></label>
+        <label>Haftalık hedef (saat)<input class="input" type="number" id="weeklyGoalInput" min="0" max="168" step="1" placeholder="örn. 25" /></label>
+        <button class="add-btn" onclick="saveGoals()">Kaydet</button>
+        <span class="form-error" id="goalError"></span>
       </div>
       <div class="section-title">Derse Göre</div>
       <div id="subjectBars"></div>
@@ -247,12 +344,19 @@ let heartbeatInterval = null;
 let friendInterval = null;
 let selectedColor = COLORS[0];
 let currentView = "today";
+let settings = {};          // { dailyGoal: saat, weeklyGoal: saat }
+let viewDate = null;        // Bugün sekmesinde gösterilen gün (YYYY-AA-GG)
+let editingSessionId = null;
 
 function fmt(seconds) {
   const h = Math.floor(seconds / 3600), m = Math.floor((seconds % 3600) / 60), s = seconds % 60;
   if (h > 0) return `${h}s ${m}d ${s}sn`;
   if (m > 0) return `${m}d ${s}sn`;
   return `${s}sn`;
+}
+function fmtHM(seconds) {
+  const h = Math.floor(seconds / 3600), m = Math.floor((seconds % 3600) / 60);
+  return h > 0 ? `${h}s ${m}d` : `${m}d`;
 }
 function fmtTime(ts) {
   return new Date(ts).toLocaleTimeString("tr-TR", { hour:"2-digit", minute:"2-digit" });
@@ -325,7 +429,7 @@ function enterApp(name, token) {
   loadUserData();
   buildColorPicker();
   if (!timelineBuilt) { buildTimeline(); timelineBuilt = true; }
-  document.getElementById("todayTitle").textContent = "Bugün — " + new Date().toLocaleDateString("tr-TR", { day:"numeric", month:"long" });
+  viewDate = getToday();
 }
 
 async function logout() {
@@ -353,9 +457,12 @@ async function loadUserData() {
   const data = await api("GET", "/api/users");
   if (data[userName]) {
     if (data[userName].sessions) sessions = Object.values(data[userName].sessions);
+    settings = data[userName].settings || {};
     // Ders listesi boşsa (yeni hesap) varsayılan dersler kalır
     if (data[userName].subjects && Object.keys(data[userName].subjects).length) subjects = Object.values(data[userName].subjects);
   }
+  document.getElementById("dailyGoalInput").value = settings.dailyGoal || "";
+  document.getElementById("weeklyGoalInput").value = settings.weeklyGoal || "";
   render();
   resumeTimer();
 }
@@ -424,6 +531,8 @@ function sendHeartbeat() {
 
 // RENDER
 function render() {
+  renderDayHeader();
+  renderGoals();
   renderSubjectGrid();
   renderTimeline();
   renderSessionLog();
@@ -433,11 +542,13 @@ function render() {
 }
 
 function todaySessions() { return sessions.filter(s => s.date === getToday()); }
+function viewSessions() { return sessions.filter(s => s.date === viewDate).sort((a,b) => a.start - b.start); }
+function secondsOn(key) { return sessions.filter(s => s.date === key).reduce((a,s) => a+s.duration, 0); }
 function totalSeconds() { return sessions.reduce((a,s) => a+s.duration, 0); }
 function todaySeconds() { return todaySessions().reduce((a,s) => a+s.duration, 0); }
 
 function updateTodayTotal() {
-  document.getElementById("todayTotal").textContent = fmt(todaySeconds());
+  document.getElementById("todayTotal").textContent = fmt(secondsOn(viewDate));
 }
 
 function renderSubjectGrid() {
@@ -473,7 +584,7 @@ function buildTimeline() {
 
 function renderTimeline() {
   const bar = document.getElementById("timelineBar");
-  bar.innerHTML = todaySessions().map(s => {
+  bar.innerHTML = viewSessions().map(s => {
     const sd = new Date(s.start), ed = new Date(s.end);
     const sh = sd.getHours() + sd.getMinutes()/60;
     const eh = ed.getHours() + ed.getMinutes()/60;
@@ -485,21 +596,23 @@ function renderTimeline() {
 
 function renderSessionLog() {
   const log = document.getElementById("sessionLog");
-  const ts = [...todaySessions()].reverse();
-  if (ts.length === 0) { log.innerHTML = '<div class="empty-msg">Henüz kayıt yok. Bir ders seçip zamanlayıcıyı başlat!</div>'; return; }
+  const ts = [...viewSessions()].reverse();
+  if (ts.length === 0) { log.innerHTML = `<div class="empty-msg">${viewDate === getToday() ? "Henüz kayıt yok. Bir ders seçip zamanlayıcıyı başlat!" : "Bu gün için kayıt yok."}</div>`; return; }
   log.innerHTML = ts.map(s => `
-    <div class="session-row">
+    <div class="session-row" onclick="openSessionForm(${s.id})">
       <div class="session-color-bar" style="background:${esc(s.color)}"></div>
       <div class="session-info">
-        <div class="session-name">${esc(s.subjectName)}</div>
+        <div class="session-name">${esc(s.subjectName)}${s.manual ? '<span class="session-manual">elle</span>' : ''}</div>
         <div class="session-time">${fmtTime(s.start)} → ${fmtTime(s.end)}</div>
       </div>
       <div class="session-dur">${fmt(s.duration)}</div>
-      <button class="delete-btn" onclick="deleteSession(${s.id})">×</button>
+      <button class="delete-btn" onclick="event.stopPropagation(); deleteSession(${s.id})">×</button>
     </div>`).join("");
 }
 
 function deleteSession(id) {
+  if (!confirm("Bu oturum silinsin mi?")) return;
+  if (editingSessionId === id) closeSessionForm();
   sessions = sessions.filter(s => s.id !== id);
   saveSessions();
   render();
@@ -509,6 +622,7 @@ function renderStats() {
   document.getElementById("statTotal").textContent = fmt(totalSeconds());
   document.getElementById("statToday").textContent = fmt(todaySeconds());
   document.getElementById("statCount").textContent = sessions.length;
+  document.getElementById("statBestStreak").textContent = `${bestStreak(sessions)} gün`;
   const maxT = Math.max(...subjects.map(sub => sessions.filter(s => s.subjectId === sub.id).reduce((a,s)=>a+s.duration,0)), 1);
   document.getElementById("subjectBars").innerHTML = subjects
     .map(sub => ({ ...sub, total: sessions.filter(s=>s.subjectId===sub.id).reduce((a,s)=>a+s.duration,0) }))
@@ -533,6 +647,158 @@ function renderStats() {
       <div class="day-total">${dayTotal > 0 ? fmt(dayTotal) : "—"}</div>
     </div>`;
   }).join("");
+}
+
+// GÜN GEZİNME
+function parseKey(key) {
+  const [y, m, d] = key.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+function shiftDay(n) {
+  const d = parseKey(viewDate);
+  d.setDate(d.getDate() + n);
+  const key = dateKey(d);
+  if (key > getToday()) return;
+  viewDate = key;
+  closeSessionForm();
+  render();
+}
+function goToday() {
+  viewDate = getToday();
+  closeSessionForm();
+  render();
+}
+function renderDayHeader() {
+  const isToday = viewDate === getToday();
+  const d = parseKey(viewDate);
+  document.getElementById("todayTitle").textContent = isToday
+    ? "Bugün — " + d.toLocaleDateString("tr-TR", { day:"numeric", month:"long" })
+    : d.toLocaleDateString("tr-TR", { weekday:"long", day:"numeric", month:"long" });
+  document.getElementById("nextDayBtn").disabled = isToday;
+  document.getElementById("backToToday").classList.toggle("hidden", isToday);
+  const streak = streakOf(sessions);
+  const badge = document.getElementById("streakBadge");
+  badge.textContent = streak > 0 ? `🔥 ${streak} gün seri` : "Seri yok";
+  badge.classList.toggle("cold", streak === 0);
+  badge.title = streak > 0 && !todaySessions().length ? "Bugün çalışırsan seri devam eder" : "";
+}
+
+// SERİ: üst üste en az bir oturum olan günler
+function streakOf(list) {
+  const days = new Set(list.map(s => s.date));
+  const d = new Date();
+  if (!days.has(dateKey(d))) d.setDate(d.getDate() - 1); // bugün henüz çalışılmadıysa seri dünden sayılır
+  let n = 0;
+  while (days.has(dateKey(d))) { n++; d.setDate(d.getDate() - 1); }
+  return n;
+}
+function bestStreak(list) {
+  const days = [...new Set(list.map(s => s.date))].sort();
+  let best = 0, run = 0, prev = null;
+  days.forEach(key => {
+    if (prev) {
+      const p = parseKey(prev);
+      p.setDate(p.getDate() + 1);
+      run = dateKey(p) === key ? run + 1 : 1;
+    } else run = 1;
+    best = Math.max(best, run);
+    prev = key;
+  });
+  return best;
+}
+
+// HEDEFLER
+function goalBar(label, done, goalHours) {
+  const goal = goalHours * 3600;
+  const pct = Math.min(100, Math.round((done / goal) * 100));
+  const reached = done >= goal;
+  return `<div class="goal-text"><span>${label}: <b>${fmtHM(done)}</b> / ${goalHours} saat</span>
+      <span>${reached ? "✅ Hedef tamam!" : `%${pct} · ${fmtHM(goal - done)} kaldı`}</span></div>
+    <div class="goal-track"><div class="goal-fill ${reached ? "done" : ""}" style="width:${pct}%"></div></div>`;
+}
+function weekStartKey() {
+  const d = new Date();
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); // pazartesi
+  return dateKey(d);
+}
+function renderGoals() {
+  const day = document.getElementById("dayGoal");
+  day.innerHTML = settings.dailyGoal > 0
+    ? goalBar(viewDate === getToday() ? "Günlük hedef" : "Günün hedefi", secondsOn(viewDate), settings.dailyGoal)
+    : `<div class="goal-text"><span>Günlük hedef koymak için <a href="#" onclick="setView('stats');return false" style="color:#48CAE4">İstatistik → Hedefler</a></span></div>`;
+  const start = weekStartKey();
+  const weekDone = sessions.filter(s => s.date >= start).reduce((a,s) => a+s.duration, 0);
+  document.getElementById("weekGoal").innerHTML = settings.weeklyGoal > 0
+    ? goalBar("Bu hafta", weekDone, settings.weeklyGoal)
+    : `<div class="goal-text"><span>Bu hafta: <b>${fmt(weekDone)}</b></span></div>`;
+}
+async function saveGoals() {
+  const msg = document.getElementById("goalError");
+  const daily = parseFloat(document.getElementById("dailyGoalInput").value) || 0;
+  const weekly = parseFloat(document.getElementById("weeklyGoalInput").value) || 0;
+  msg.style.color = "";
+  if (daily < 0 || daily > 24 || weekly < 0 || weekly > 168) { msg.textContent = "Geçersiz değer."; return; }
+  settings = { ...settings, dailyGoal: daily, weeklyGoal: weekly };
+  msg.textContent = "";
+  render();
+  await api("POST", `/api/users/${userName}/settings`, settings);
+  msg.style.color = "#48CAE4";
+  msg.textContent = "Kaydedildi ✓";
+  setTimeout(() => { msg.textContent = ""; msg.style.color = ""; }, 2000);
+}
+
+// OTURUM EKLE / DÜZENLE
+function timeStr(ts) {
+  const d = new Date(ts);
+  return `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+}
+function openSessionForm(id) {
+  const s = id ? sessions.find(x => x.id === id) : null;
+  editingSessionId = s ? s.id : null;
+  const options = subjects.map(sub => ({ id: sub.id, name: sub.name }));
+  if (s && !subjects.some(sub => sub.id === s.subjectId)) options.push({ id: s.subjectId, name: s.subjectName + " (silinmiş)" });
+  const sel = document.getElementById("sfSubject");
+  sel.innerHTML = options.map(o => `<option value="${o.id}">${esc(o.name)}</option>`).join("");
+  if (s) {
+    sel.value = String(s.subjectId);
+    document.getElementById("sfStart").value = timeStr(s.start);
+    document.getElementById("sfEnd").value = timeStr(s.end);
+  } else {
+    const end = viewDate === getToday() ? Date.now() : parseKey(viewDate).setHours(12, 0);
+    document.getElementById("sfStart").value = timeStr(end - 3600 * 1000);
+    document.getElementById("sfEnd").value = timeStr(end);
+  }
+  document.getElementById("sessionFormTitle").textContent = s ? "Oturumu düzenle" : "Oturum ekle";
+  document.getElementById("sfError").textContent = "";
+  document.getElementById("sessionForm").classList.remove("hidden");
+  document.getElementById("sessionForm").scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+function closeSessionForm() {
+  editingSessionId = null;
+  document.getElementById("sessionForm").classList.add("hidden");
+}
+function saveSessionForm() {
+  const err = document.getElementById("sfError");
+  const startStr = document.getElementById("sfStart").value, endStr = document.getElementById("sfEnd").value;
+  if (!startStr || !endStr) { err.textContent = "Başlangıç ve bitiş saatini gir."; return; }
+  const existing = editingSessionId ? sessions.find(x => x.id === editingSessionId) : null;
+  const dayKey = existing ? existing.date : viewDate;
+  const [sh, sm] = startStr.split(":").map(Number), [eh, em] = endStr.split(":").map(Number);
+  const start = parseKey(dayKey).setHours(sh, sm, 0, 0);
+  let end = parseKey(dayKey).setHours(eh, em, 0, 0);
+  if (end <= start) end += 24 * 3600 * 1000; // gece yarısını geçen oturum
+  const duration = Math.round((end - start) / 1000);
+  if (duration > 16 * 3600) { err.textContent = "Oturum 16 saatten uzun olamaz."; return; }
+  if (end > Date.now() + 60 * 1000) { err.textContent = "Bitiş saati gelecekte olamaz."; return; }
+  const subId = Number(document.getElementById("sfSubject").value);
+  const sub = subjects.find(x => x.id === subId) || (existing && { id: existing.subjectId, name: existing.subjectName, color: existing.color });
+  if (!sub) { err.textContent = "Ders seç."; return; }
+  const data = { subjectId: sub.id, subjectName: sub.name, color: sub.color, start, end, duration, date: dateKey(new Date(start)) };
+  if (existing) Object.assign(existing, data, { edited: true });
+  else sessions.push({ id: Date.now(), ...data, manual: true });
+  closeSessionForm();
+  saveSessions();
+  render();
 }
 
 // SUBJECTS VIEW
@@ -607,7 +873,7 @@ async function loadFriends() {
       <div class="friend-header">
         <div class="friend-name">
           <span class="online-dot" style="background:${isActive?'#48CAE4':'#1a3a5c'}"></span>
-          @${esc(name)}
+          @${esc(name)}${streakOf(fSessions) > 1 ? `<span class="friend-streak">🔥 ${streakOf(fSessions)}</span>` : ""}
         </div>
         <div class="friend-total">${fmt(fTotal)} bugün</div>
       </div>
@@ -641,6 +907,8 @@ function setView(v) {
   }
   if (v === "stats") renderStats();
 }
+
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
 
 // Kayıtlı oturum varsa doğrudan uygulamaya gir
 const savedAuth = storageGet(LS_AUTH);
