@@ -296,6 +296,10 @@
       <div id="subjectBars"></div>
       <div class="section-title">Son 7 Gün</div>
       <div id="weekChart"></div>
+      <div class="goal-form hidden" id="exportBox" style="margin-top:24px">
+        <span style="font-size:13px;color:#4a7a9b;flex:1">Yeni siteye taşımak için tüm kullanıcıların verisini tek dosya olarak indir.</span>
+        <button class="add-btn" onclick="exportAll()">📦 Verileri indir</button>
+      </div>
     </div>
 
     <!-- SUBJECTS -->
@@ -890,7 +894,18 @@ async function loadFriends() {
 }
 
 // VIEW SWITCHER
+// Firebase'e taşıma için: şifre hash'leri sunucudan zaten gelmez
+async function exportAll() {
+  const data = await api("GET", "/api/users");
+  const blob = new Blob([JSON.stringify({ exportedAt: Date.now(), users: data }, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `studyflow-yedek-${getToday()}.json`;
+  a.click();
+}
+
 function setView(v) {
+  document.getElementById("exportBox").classList.toggle("hidden", userName !== "bircan");
   currentView = v;
   ["today","stats","subjects","friend"].forEach(name => {
     document.getElementById(`view-${name}`).classList.toggle("hidden", name !== v);
