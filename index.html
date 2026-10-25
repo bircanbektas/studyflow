@@ -425,7 +425,6 @@ db.enablePersistence({ synchronizeTabs: true }).catch(() => {});
 let uid = null;
 let unsubMe = null, unsubFriends = null;
 let friendsData = {};       // arkadaşların belgeleri (uid -> veri)
-let firstSnapshot = true;
 
 function userRef() { return db.collection("users").doc(uid); }
 
@@ -464,18 +463,6 @@ function removeSession(id) { return userRef().update(new FieldPath("sessions", S
 function saveSubject(s) { return userRef().update(new FieldPath("subjects", String(s.id)), s).catch(saveFailed); }
 function removeSubject(id) { return userRef().update(new FieldPath("subjects", String(id)), FieldValue.delete()).catch(saveFailed); }
 function setActive(active) { return userRef().update({ active }).catch(() => {}); }
-
-// LOCAL STORAGE (sadece çalışan kronometre için)
-const LS_TIMER = "studyflow.timer";
-function storageGet(key) {
-  try { return JSON.parse(localStorage.getItem(key)); } catch { return null; }
-}
-function storageSet(key, value) {
-  try {
-    if (value === null) localStorage.removeItem(key);
-    else localStorage.setItem(key, JSON.stringify(value));
-  } catch {}
-}
 
 // GİRİŞ / KAYIT
 let authMode = "login";     // login | register | setup (hesap var ama kullanıcı adı seçilmemiş)
@@ -620,21 +607,18 @@ function enterApp(profile) {
   if (!timelineBuilt) { buildTimeline(); timelineBuilt = true; }
   viewDate = getToday();
   applyProfile(profile);
-  firstSnapshot = true;
   if (unsubMe) unsubMe();
-  // Kendi belgemizi dinle: başka cihazda yapılan değişiklik de anında gelir
+  // Kendi belgemizi dinle: başka cihazda yapılan değişiklik (kronometre dahil) anında gelir
   unsubMe = userRef().onSnapshot(snap => {
     if (!snap.exists) return;
-    applyProfile(snap.data());
-    if (firstSnapshot) {
-      firstSnapshot = false;
-      resumeTimer();
-    }
+    // Bu cihazın henüz sunucuya ulaşmamış yazımları varken kronometreyi senkronlama (ara durumlar görünmesin)
+    applyProfile(snap.data(), !snap.metadata.hasPendingWrites);
   }, e => showToast("Veriler alınamadı: " + firebaseError(e), true));
   setView(currentView);
 }
 
-function applyProfile(p) {
+function applyProfile(p, syncTimer) {
+  if (syncTimer) syncActiveTimer(p.active);
   sessions = Object.values(p.sessions || {});
   subjects = Object.values(p.subjects || {}).sort((a, b) => a.id - b.id);
   const goalsChanged = JSON.stringify(settings) !== JSON.stringify(p.settings || {});
@@ -655,51 +639,61 @@ function cleanup() {
 }
 
 async function logout() {
-  if (activeSub) stopTimer();
+  // Kronometre durdurulmaz: başka cihazda ya da tekrar girişte devam eder
+  clearLocalTimer();
   cleanup();
   await auth.signOut();
 }
 
-// Sayfa yenilendiyse/kapandıysa yarım kalan zamanlayıcıyı kaldığı yerden sürdür
-function resumeTimer() {
-  const t = storageGet(LS_TIMER);
-  if (!t || t.user !== userName || activeSub) return;
-  const sub = subjects.find(s => s.id === t.subjectId) || { id: t.subjectId, name: t.subjectName, color: t.color };
-  startTimer(sub, t.start);
+// Çalışan kronometre belgedeki "active" alanında durur; tüm cihazlar onu izler.
+// Sayfa yenilense, başka cihazda başlatılsa ya da durdurulsa da burası ona uyar.
+function syncActiveTimer(active) {
+  if (active && active.subjectId !== undefined) {
+    if (activeSub && timerStart === active.start) return;
+    const sub = subjects.find(s => s.id === active.subjectId) || { id: active.subjectId, name: active.subjectName, color: active.color };
+    startTimer(sub, active.start, true);
+  } else if (!active && activeSub) {
+    clearLocalTimer(); // başka cihazda durduruldu; oturumu o cihaz kaydetti
+  }
 }
 
 // TIMER
-function startTimer(sub, start = Date.now()) {
-  if (activeSub) stopTimer();
+function startTimer(sub, start = Date.now(), fromOtherDevice = false) {
+  if (activeSub) fromOtherDevice ? clearLocalTimer() : stopTimer();
   activeSub = sub;
   timerStart = start;
-  storageSet(LS_TIMER, { user: userName, subjectId: sub.id, subjectName: sub.name, color: sub.color, start });
   updateTimerDisplay();
   document.getElementById("activeBar").classList.remove("hidden");
   document.getElementById("activeDot").style.background = sub.color;
   document.getElementById("activeLabel").textContent = sub.name;
   timerInterval = setInterval(updateTimerDisplay, 1000);
-  sendHeartbeat();
+  if (!fromOtherDevice) sendHeartbeat();
   heartbeatInterval = setInterval(sendHeartbeat, HEARTBEAT_MS);
   renderSubjectGrid();
 }
 
 function stopTimer() {
   if (!activeSub || !timerStart) return;
-  clearInterval(timerInterval);
-  clearInterval(heartbeatInterval);
   const end = Date.now();
   const duration = Math.floor((end - timerStart) / 1000);
   if (duration >= 10) {
-    const s = { id: Date.now(), subjectId: activeSub.id, subjectName: activeSub.name, color: activeSub.color, start: timerStart, end, duration, date: dateKey(new Date(timerStart)) };
+    // Kimlik başlangıç zamanı: iki cihaz aynı anda durdursa bile tek oturum yazılır
+    const s = { id: timerStart, subjectId: activeSub.id, subjectName: activeSub.name, color: activeSub.color, start: timerStart, end, duration, date: dateKey(new Date(timerStart)) };
     sessions.push(s);
     saveSession(s);
   }
-  storageSet(LS_TIMER, null);
   setActive(null);
+  clearLocalTimer();
+  render();
+}
+
+// Kronometreyi sadece bu ekranda kapatır (kayıt yapmaz)
+function clearLocalTimer() {
+  clearInterval(timerInterval);
+  clearInterval(heartbeatInterval);
   activeSub = null; timerStart = null;
   document.getElementById("activeBar").classList.add("hidden");
-  render();
+  renderSubjectGrid();
 }
 
 function updateTimerDisplay() {
@@ -709,7 +703,7 @@ function updateTimerDisplay() {
 
 function sendHeartbeat() {
   if (!activeSub) return;
-  setActive({ subjectName: activeSub.name, color: activeSub.color, start: timerStart, alive: Date.now() });
+  setActive({ subjectId: activeSub.id, subjectName: activeSub.name, color: activeSub.color, start: timerStart, alive: Date.now() });
 }
 
 // RENDER
