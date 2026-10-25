@@ -2,9 +2,9 @@
 echo.
 echo 🌊 StudyFlow baslatiliyor...
 echo.
-pip install flask flask-cors --quiet
+pip install flask --quiet
 echo.
-echo ✅ Hazir! Tarayicini ac ve git: http://localhost:5000
+echo ✅ Hazir! Tarayicini ac ve git: http://localhost:8080
 echo.
 python server.py
 pause
