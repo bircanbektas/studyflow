@@ -226,7 +226,6 @@
       <button class="today-link" id="resetLink" onclick="resetPassword()">Şifremi unuttum</button>
       <button class="today-link hidden" id="setupLogout" onclick="logout()">Çıkış yap</button>
     </div>
-    <p class="login-hint" id="authHint"></p>
   </div>
 </div>
 
@@ -318,11 +317,6 @@
       <div id="subjectBars"></div>
       <div class="section-title">Son 7 Gün</div>
       <div id="weekChart"></div>
-      <div class="goal-form hidden" id="importBox" style="margin-top:24px">
-        <span style="font-size:13px;color:#4a7a9b;flex:1">Eski siteden indirdiğin <b>studyflow-yedek-....json</b> dosyasını seç. Herkesin verisi, aynı kullanıcı adıyla kaydolduğunda hesabına aktarılır.</span>
-        <label class="add-btn" style="cursor:pointer">📥 Eski verileri içe aktar<input type="file" accept=".json,application/json" style="display:none" onchange="importLegacy(this.files[0]); this.value=''" /></label>
-        <span class="form-error" id="importMsg"></span>
-      </div>
     </div>
 
     <!-- SUBJECTS -->
@@ -516,8 +510,6 @@ function setAuthMode(mode) {
   document.getElementById("authSub").innerHTML = mode === "setup"
     ? "Son bir adım: arkadaşlarının seni göreceği<br>kullanıcı adını seç"
     : "Çalışma saatlerini takip et,<br>arkadaşınla gerçek zamanlı senkronize ol";
-  document.getElementById("authHint").innerHTML = mode === "login" ? ""
-    : "Eski StudyFlow'daki kullanıcı adını yazarsan<br>eski çalışma kayıtların hesabına aktarılır.";
   showLoginError("");
 }
 
@@ -598,25 +590,6 @@ async function claimUsername(name) {
   return profile;
 }
 
-// Eski siteden aktarılmış veri bu kullanıcı adına bekliyorsa hesaba ekle
-async function mergeLegacy() {
-  const ref = db.collection("legacy").doc(userName);
-  const snap = await ref.get().catch(() => null);
-  if (!snap || !snap.exists) return;
-  const old = snap.data();
-  const oldSubjects = old.subjects || {};
-  const hasOldSubjects = Object.keys(oldSubjects).length > 0;
-  const onlyDefaults = subjects.every(s => DEFAULT_SUBJECTS.some(d => d.id === s.id));
-  // Hiç dokunulmamış varsayılan dersler yerine eski dersler gelsin; aksi halde eskiler yanına eklensin
-  if (hasOldSubjects && onlyDefaults) await userRef().update({ subjects: oldSubjects });
-  const update = { sessions: old.sessions || {} };
-  if (hasOldSubjects && !onlyDefaults) update.subjects = oldSubjects;
-  if (!settings.dailyGoal && !settings.weeklyGoal && old.settings) update.settings = old.settings;
-  await userRef().set(update, { merge: true });
-  await ref.delete();
-  showToast(`Eski kayıtların aktarıldı ✓ (${Object.keys(old.sessions || {}).length} oturum)`);
-}
-
 auth.onAuthStateChanged(async user => {
   if (registering) return;
   if (!user) {
@@ -656,7 +629,6 @@ function enterApp(profile) {
     if (firstSnapshot) {
       firstSnapshot = false;
       resumeTimer();
-      mergeLegacy().catch(saveFailed);
     }
   }, e => showToast("Veriler alınamadı: " + firebaseError(e), true));
   setView(currentView);
@@ -1111,34 +1083,7 @@ function renderFriends() {
 }
 
 // VIEW SWITCHER
-// ESKİ SİTEDEN TAŞIMA (sadece bircan): yedek dosyasındaki herkesin verisi legacy/{kullanıcı adı} belgesine yazılır
-async function importLegacy(file) {
-  const msg = document.getElementById("importMsg");
-  msg.style.color = "";
-  if (!file) return;
-  try {
-    const json = JSON.parse(await file.text());
-    const users = json.users || json;
-    const batch = db.batch();
-    const done = [], skipped = [];
-    Object.entries(users).forEach(([raw, u]) => {
-      const name = String(raw).trim().toLocaleLowerCase("tr-TR");
-      const count = Object.keys((u && u.sessions) || {}).length;
-      if (!USERNAME_RE.test(name) || (!count && !Object.keys((u && u.subjects) || {}).length)) { skipped.push(name); return; }
-      batch.set(db.collection("legacy").doc(name), { sessions: u.sessions || {}, subjects: u.subjects || {}, settings: u.settings || {}, importedAt: Date.now() });
-      done.push(`${name} (${count})`);
-    });
-    await batch.commit();
-    msg.style.color = "#48CAE4";
-    msg.textContent = `Aktarıldı: ${done.join(", ")}` + (skipped.length ? ` · Boş/geçersiz, atlandı: ${skipped.join(", ")}` : "");
-    await mergeLegacy();
-  } catch (e) {
-    msg.textContent = "İçe aktarılamadı: " + (e.code ? firebaseError(e) : e.message);
-  }
-}
-
 function setView(v) {
-  document.getElementById("importBox").classList.toggle("hidden", userName !== "bircan");
   currentView = v;
   ["today","stats","subjects","friend"].forEach(name => {
     document.getElementById(`view-${name}`).classList.toggle("hidden", name !== v);
