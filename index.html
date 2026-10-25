@@ -1,0 +1,1165 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StudyFlow 🌊</title>
+  <meta name="theme-color" content="#031428" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="StudyFlow" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #020d18; color: #cce7f5; font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; background-image: radial-gradient(ellipse at 20% 50%, #031a2e 0%, #020d18 60%); }
+
+    /* HEADER */
+    .header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; background: rgba(3,20,40,0.95); border-bottom: 1px solid #0a3a5c; flex-wrap: wrap; gap: 8px; position: sticky; top: 0; z-index: 10; backdrop-filter: blur(10px); }
+    .logo { font-size: 18px; font-weight: 700; color: #90E0EF; letter-spacing: 0.5px; }
+    .user-badge { font-size: 13px; color: #48CAE4; background: #031a2e; padding: 3px 12px; border-radius: 20px; border: 1px solid #0a3a5c; }
+    .active-bar { display: flex; align-items: center; gap: 10px; background: #031a2e; padding: 8px 14px; border-radius: 12px; border: 1px solid #0096C7; }
+    .active-dot { width: 10px; height: 10px; border-radius: 50%; animation: pulse 1.5s infinite; }
+    .active-label { font-size: 14px; font-weight: 600; color: #ADE8F4; }
+    .active-time { font-size: 18px; font-weight: 700; color: #CAF0F8; font-variant-numeric: tabular-nums; min-width: 80px; }
+    .stop-btn { background: #0077B6; color: #fff; border: none; border-radius: 8px; padding: 6px 14px; cursor: pointer; font-weight: 600; font-size: 13px; }
+    .stop-btn:hover { background: #005f9e; }
+
+    /* NAV */
+    .nav { display: flex; gap: 4px; padding: 10px 20px; background: rgba(3,20,40,0.9); border-bottom: 1px solid #0a3a5c; }
+    .nav-btn { background: transparent; border: none; color: #4a7a9b; padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.15s; }
+    .nav-btn:hover { color: #90E0EF; }
+    .nav-btn.active { background: #031a2e; color: #90E0EF; border: 1px solid #0077B6; }
+
+    /* CONTENT */
+    .content { padding: 20px; max-width: 800px; margin: 0 auto; }
+    .section-title { font-size: 18px; font-weight: 700; color: #90E0EF; margin-bottom: 16px; margin-top: 8px; }
+    .section-sub { font-size: 13px; color: #4a7a9b; margin-top: 2px; margin-bottom: 16px; }
+    .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .empty-msg { color: #1a4a6b; font-size: 14px; padding: 20px 0; }
+
+    /* SUBJECT GRID */
+    .subject-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-bottom: 24px; }
+    .subject-btn { border: 2px solid; border-radius: 12px; padding: 14px 12px; cursor: pointer; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: all 0.2s; justify-content: center; background: rgba(0,100,180,0.08); color: #ADE8F4; }
+    .subject-btn:hover { transform: scale(1.03); }
+    .subject-btn.running { transform: scale(1.04); color: #fff; }
+    .subject-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .pulsing { font-size: 10px; color: #fff; }
+
+    /* TIMELINE */
+    .timeline-wrap { margin-bottom: 24px; }
+    .timeline-title { font-size: 13px; color: #4a7a9b; margin-bottom: 8px; }
+    .timeline-track { position: relative; padding-top: 20px; }
+    .timeline-hour { position: absolute; top: 0; font-size: 10px; color: #1a4a6b; transform: translateX(-50%); }
+    .timeline-bar { height: 32px; background: #031a2e; border-radius: 8px; position: relative; overflow: hidden; border: 1px solid #0a3a5c; }
+    .timeline-block { position: absolute; height: 100%; border-radius: 4px; opacity: 0.85; cursor: pointer; transition: opacity 0.15s; }
+    .timeline-block:hover { opacity: 1; }
+
+    /* SESSION LOG */
+    .log-title { font-size: 14px; color: #4a7a9b; margin-bottom: 10px; }
+    .session-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: #031525; border-radius: 10px; margin-bottom: 8px; border: 1px solid #0a3a5c; }
+    .session-color-bar { width: 4px; height: 36px; border-radius: 2px; flex-shrink: 0; }
+    .session-info { flex: 1; }
+    .session-name { font-weight: 600; font-size: 14px; color: #ADE8F4; }
+    .session-time { font-size: 12px; color: #2a5a7c; margin-top: 2px; }
+    .session-dur { font-weight: 700; color: #90E0EF; font-size: 15px; }
+    .delete-btn { background: transparent; border: none; color: #1a4a6b; cursor: pointer; font-size: 20px; padding: 0 4px; transition: color 0.15s; }
+    .delete-btn:hover { color: #ff6b6b; }
+
+    /* STATS */
+    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+    .stat-card { background: #031525; border-radius: 12px; padding: 16px; text-align: center; border: 1px solid #0a3a5c; }
+    .stat-num { font-size: 22px; font-weight: 700; color: #48CAE4; }
+    .stat-label { font-size: 12px; color: #2a5a7c; margin-top: 4px; }
+    .bar-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .bar-label { width: 140px; font-size: 13px; display: flex; align-items: center; gap: 6px; color: #ADE8F4; }
+    .bar-track { flex: 1; height: 16px; background: #031a2e; border-radius: 8px; overflow: hidden; border: 1px solid #0a3a5c; }
+    .bar-fill { height: 100%; border-radius: 8px; transition: width 0.5s; }
+    .bar-dur { width: 80px; font-size: 12px; color: #4a7a9b; text-align: right; }
+    .day-row { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; padding: 10px 14px; background: #031525; border-radius: 10px; border: 1px solid #0a3a5c; }
+    .day-label { width: 90px; font-size: 13px; color: #4a7a9b; }
+    .day-bar { flex: 1; display: flex; align-items: center; gap: 2px; }
+    .day-block { height: 24px; border-radius: 4px; min-width: 4px; }
+    .day-total { font-size: 13px; color: #90E0EF; width: 80px; text-align: right; }
+
+    /* SUBJECTS VIEW */
+    .add-sub-form { background: #031525; border-radius: 12px; padding: 16px; margin-bottom: 16px; border: 1px solid #0a3a5c; }
+    .input { width: 100%; background: #020d18; border: 1px solid #0a3a5c; color: #ADE8F4; border-radius: 8px; padding: 10px 14px; font-size: 14px; margin-bottom: 12px; }
+    .input:focus { outline: none; border-color: #0096C7; }
+    .color-picker { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+    .color-swatch { width: 28px; height: 28px; border-radius: 8px; cursor: pointer; border: 3px solid transparent; transition: transform 0.1s; }
+    .color-swatch:hover { transform: scale(1.15); }
+    .color-swatch.selected { border-color: white; }
+    .add-btn { background: #0077B6; color: #fff; border: none; border-radius: 8px; padding: 8px 16px; cursor: pointer; font-weight: 600; font-size: 13px; }
+    .add-btn:hover { background: #005f9e; }
+    .subject-row { display: flex; align-items: center; gap: 12px; padding: 14px; background: #031525; border-radius: 10px; margin-bottom: 8px; border: 1px solid #0a3a5c; }
+    .subject-row-dot { width: 14px; height: 14px; border-radius: 4px; flex-shrink: 0; }
+    .subject-row-name { flex: 1; font-weight: 600; color: #ADE8F4; }
+    .subject-row-stat { font-size: 13px; color: #4a7a9b; }
+
+    /* FRIEND VIEW */
+    .friend-hint { font-size: 13px; color: #2a5a7c; margin-bottom: 20px; line-height: 1.6; background: #031525; padding: 12px 16px; border-radius: 10px; border: 1px solid #0a3a5c; }
+    .friend-card { background: #031525; border-radius: 12px; padding: 16px; margin-bottom: 12px; border: 1px solid #0a3a5c; }
+    .friend-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .friend-name { font-weight: 700; font-size: 16px; display: flex; align-items: center; gap: 8px; color: #ADE8F4; }
+    .online-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .friend-total { font-size: 13px; color: #4a7a9b; }
+    .friend-last { font-size: 13px; color: #2a5a7c; margin-bottom: 10px; }
+    .friend-timeline { height: 20px; background: #020d18; border-radius: 6px; position: relative; overflow: hidden; border: 1px solid #0a3a5c; }
+    .friend-active-box { display: flex; align-items: center; gap: 6px; padding: 10px 12px; background: #021828; border-radius: 10px; margin-bottom: 10px; border: 1px solid #0096C7; flex-wrap: wrap; }
+    .friend-active-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .friend-active-name { font-weight: 700; }
+    .friend-active-since { font-size: 13px; color: #4a7a9b; }
+    .friend-active-timer { font-size: 16px; font-weight: 700; color: #48CAE4; font-variant-numeric: tabular-nums; }
+
+    /* LOGIN */
+    .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; background-image: radial-gradient(ellipse at 50% 40%, #031a2e 0%, #020d18 70%); }
+    .login-card { background: #031525; border: 1px solid #0a3a5c; border-radius: 20px; padding: 40px 32px; max-width: 400px; width: 100%; text-align: center; box-shadow: 0 0 60px rgba(0,150,200,0.1); }
+    .login-logo { font-size: 56px; margin-bottom: 12px; }
+    .login-title { font-size: 28px; font-weight: 800; color: #90E0EF; margin-bottom: 8px; letter-spacing: 1px; }
+    .login-sub { font-size: 14px; color: #2a5a7c; margin-bottom: 28px; line-height: 1.6; }
+    .login-input { width: 100%; background: #020d18; border: 1px solid #0a3a5c; color: #ADE8F4; border-radius: 10px; padding: 12px 16px; font-size: 16px; margin-bottom: 14px; text-align: center; }
+    .login-input:focus { outline: none; border-color: #0096C7; }
+    .login-btn { width: 100%; background: linear-gradient(135deg, #0096C7, #023E8A); color: #fff; border: none; border-radius: 10px; padding: 13px; font-size: 16px; font-weight: 700; cursor: pointer; transition: opacity 0.2s; }
+    .login-btn:hover { opacity: 0.9; }
+    .login-hint { font-size: 12px; color: #1a3a5c; margin-top: 16px; line-height: 1.6; }
+    .login-error { font-size: 13px; color: #ff6b6b; margin-top: 12px; }
+    .login-error.ok { color: #7ae582; }
+    .auth-tabs { display: flex; gap: 6px; margin-bottom: 18px; background: #020d18; border: 1px solid #0a3a5c; border-radius: 12px; padding: 4px; }
+    .auth-tab { flex: 1; background: transparent; border: none; color: #4a7a9b; padding: 9px; border-radius: 9px; cursor: pointer; font-size: 14px; font-weight: 600; }
+    .auth-tab.active { background: #031a2e; color: #90E0EF; }
+    .auth-links { margin-top: 12px; display: flex; justify-content: center; gap: 16px; }
+    .loading-text { color: #4a7a9b; font-size: 14px; }
+    .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: #031525; border: 1px solid #0096C7; color: #ADE8F4; padding: 10px 18px; border-radius: 10px; font-size: 14px; z-index: 50; max-width: calc(100% - 32px); box-shadow: 0 8px 30px rgba(0,0,0,0.4); }
+    .toast.error { border-color: #ff6b6b; color: #ffb3b3; }
+    .logout-btn { background: transparent; border: 1px solid #0a3a5c; color: #4a7a9b; border-radius: 20px; padding: 3px 10px; cursor: pointer; font-size: 12px; }
+    .logout-btn:hover { color: #ff6b6b; border-color: #ff6b6b; }
+
+    /* DAY NAV / STREAK / GOAL */
+    .day-nav { display: flex; align-items: center; gap: 8px; }
+    .day-nav-btn { background: #031525; border: 1px solid #0a3a5c; color: #90E0EF; border-radius: 8px; width: 32px; height: 32px; cursor: pointer; font-size: 16px; flex-shrink: 0; }
+    .day-nav-btn:hover:not(:disabled) { border-color: #0096C7; }
+    .day-nav-btn:disabled { opacity: 0.3; cursor: default; }
+    .today-link { background: transparent; border: none; color: #48CAE4; cursor: pointer; font-size: 12px; text-decoration: underline; }
+    .streak-badge { font-size: 14px; font-weight: 700; color: #ffb347; background: #1a1205; border: 1px solid #5c3a0a; padding: 6px 12px; border-radius: 20px; white-space: nowrap; }
+    .streak-badge.cold { color: #4a7a9b; background: #031525; border-color: #0a3a5c; }
+    .goal-wrap { margin-bottom: 20px; }
+    .goal-text { display: flex; justify-content: space-between; font-size: 12px; color: #4a7a9b; margin-bottom: 6px; gap: 8px; }
+    .goal-text b { color: #90E0EF; }
+    .goal-track { height: 10px; background: #031a2e; border-radius: 6px; overflow: hidden; border: 1px solid #0a3a5c; }
+    .goal-fill { height: 100%; background: linear-gradient(90deg, #0077B6, #48CAE4); border-radius: 6px; transition: width 0.5s; }
+    .goal-fill.done { background: linear-gradient(90deg, #2a9d8f, #7ae582); }
+    .goal-form { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; background: #031525; border-radius: 12px; padding: 16px; margin-bottom: 24px; border: 1px solid #0a3a5c; }
+    .goal-form label { font-size: 12px; color: #4a7a9b; display: flex; flex-direction: column; gap: 6px; }
+    .goal-form .input { width: 120px; margin-bottom: 0; }
+
+    /* SESSION FORM */
+    .log-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .log-header .log-title { margin-bottom: 0; }
+    .session-form { background: #031525; border-radius: 12px; padding: 16px; margin-bottom: 12px; border: 1px solid #0096C7; }
+    .session-form-title { font-size: 14px; font-weight: 600; color: #90E0EF; margin-bottom: 12px; }
+    .session-form-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 10px; }
+    .session-form-grid label { font-size: 12px; color: #4a7a9b; display: flex; flex-direction: column; gap: 6px; }
+    .session-form-grid .input { margin-bottom: 0; color-scheme: dark; }
+    .session-form-actions { display: flex; gap: 8px; margin-top: 12px; align-items: center; flex-wrap: wrap; }
+    .cancel-btn { background: transparent; border: 1px solid #0a3a5c; color: #4a7a9b; border-radius: 8px; padding: 8px 16px; cursor: pointer; font-size: 13px; }
+    .form-error { font-size: 13px; color: #ff6b6b; }
+    .session-row { cursor: pointer; }
+    .session-row:hover { border-color: #0077B6; }
+    .session-manual { font-size: 11px; color: #4a7a9b; border: 1px solid #0a3a5c; border-radius: 6px; padding: 0 5px; margin-left: 6px; font-weight: 400; }
+    .friend-streak { font-size: 12px; color: #ffb347; margin-left: 4px; }
+
+    /* MOBILE */
+    @media (max-width: 600px) {
+      .header { padding: 10px 12px; }
+      .active-bar { width: 100%; justify-content: space-between; padding: 8px 10px; }
+      .active-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .nav { padding: 8px 12px; overflow-x: auto; scrollbar-width: none; }
+      .nav::-webkit-scrollbar { display: none; }
+      .nav-btn { white-space: nowrap; padding: 8px 10px; }
+      .content { padding: 14px 12px 40px; }
+      .subject-grid { grid-template-columns: repeat(2, 1fr); }
+      .subject-btn { padding: 16px 8px; font-size: 13px; }
+      .timeline-hour:nth-child(3n+2), .timeline-hour:nth-child(3n+3) { display: none; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .bar-label { width: 100px; font-size: 12px; overflow: hidden; }
+      .bar-dur { width: 70px; }
+      .day-label { width: 60px; }
+      .day-bar { overflow: hidden; }
+      .session-form-grid { grid-template-columns: 1fr 1fr; }
+      .session-form-grid label:first-child { grid-column: 1 / -1; }
+      .delete-btn { font-size: 24px; padding: 0 8px; }
+      .login-card { margin: 0 16px; padding: 32px 20px; }
+    }
+
+    @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+    @keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0; } }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="login-wrap" id="loadingScreen">
+  <div style="text-align:center"><div class="login-logo">🌊</div><div class="loading-text">Yükleniyor...</div></div>
+</div>
+
+<!-- LOGIN -->
+<div class="login-wrap hidden" id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">🌊</div>
+    <h1 class="login-title">StudyFlow</h1>
+    <p class="login-sub" id="authSub">Çalışma saatlerini takip et,<br>arkadaşınla gerçek zamanlı senkronize ol</p>
+    <div class="auth-tabs" id="authTabs">
+      <button class="auth-tab active" id="tabLogin" onclick="setAuthMode('login')">Giriş</button>
+      <button class="auth-tab" id="tabRegister" onclick="setAuthMode('register')">Kayıt ol</button>
+    </div>
+    <input class="login-input" id="emailInput" type="email" placeholder="E-posta" autocomplete="email" />
+    <input class="login-input hidden" id="usernameInput" placeholder="Kullanıcı adı (örn: ali)" autocomplete="off" autocapitalize="none" />
+    <input class="login-input" id="passwordInput" type="password" placeholder="Şifre" autocomplete="current-password" />
+    <button class="login-btn" id="loginBtn" onclick="submitAuth()">Giriş yap →</button>
+    <p class="login-error hidden" id="loginError"></p>
+    <div class="auth-links">
+      <button class="today-link" id="resetLink" onclick="resetPassword()">Şifremi unuttum</button>
+      <button class="today-link hidden" id="setupLogout" onclick="logout()">Çıkış yap</button>
+    </div>
+    <p class="login-hint" id="authHint"></p>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="appScreen" class="hidden">
+  <div class="header">
+    <div style="display:flex;align-items:center;gap:12px">
+      <span class="logo">🌊 StudyFlow</span>
+      <span class="user-badge" id="userBadge"></span>
+      <button class="logout-btn" onclick="logout()">Çıkış</button>
+    </div>
+    <div class="active-bar hidden" id="activeBar">
+      <span class="active-dot" id="activeDot"></span>
+      <span class="active-label" id="activeLabel"></span>
+      <span class="active-time" id="activeTime">0d 0sn</span>
+      <button class="stop-btn" onclick="stopTimer()">■ Durdur</button>
+    </div>
+  </div>
+
+  <div class="nav">
+    <button class="nav-btn active" onclick="setView('today')">📅 Bugün</button>
+    <button class="nav-btn" onclick="setView('stats')">📊 İstatistik</button>
+    <button class="nav-btn" onclick="setView('subjects')">🎨 Dersler</button>
+    <button class="nav-btn" onclick="setView('friend')">👥 Arkadaşlar</button>
+  </div>
+
+  <div class="content">
+
+    <!-- TODAY -->
+    <div id="view-today">
+      <div class="section-header">
+        <div>
+          <div class="day-nav">
+            <button class="day-nav-btn" onclick="shiftDay(-1)" title="Önceki gün">‹</button>
+            <div class="section-title" id="todayTitle" style="margin:0"></div>
+            <button class="day-nav-btn" id="nextDayBtn" onclick="shiftDay(1)" title="Sonraki gün">›</button>
+          </div>
+          <div class="section-sub" style="margin-top:6px">Toplam: <b id="todayTotal" style="color:#48CAE4">0sn</b>
+            <button class="today-link hidden" id="backToToday" onclick="goToday()">bugüne dön</button></div>
+        </div>
+        <span class="streak-badge" id="streakBadge"></span>
+      </div>
+      <div class="goal-wrap" id="dayGoal"></div>
+      <div class="subject-grid" id="subjectGrid"></div>
+      <div class="timeline-wrap">
+        <div class="timeline-title">Zaman Çizelgesi</div>
+        <div class="timeline-track" id="timelineTrack">
+          <div class="timeline-bar" id="timelineBar"></div>
+        </div>
+      </div>
+      <div class="log-header">
+        <div class="log-title">Oturumlar <span style="font-size:12px">(düzenlemek için tıkla)</span></div>
+        <button class="add-btn" onclick="openSessionForm()">+ Elle ekle</button>
+      </div>
+      <div class="session-form hidden" id="sessionForm">
+        <div class="session-form-title" id="sessionFormTitle">Oturum ekle</div>
+        <div class="session-form-grid">
+          <label>Ders<select class="input" id="sfSubject"></select></label>
+          <label>Başlangıç<input class="input" type="time" id="sfStart" /></label>
+          <label>Bitiş<input class="input" type="time" id="sfEnd" /></label>
+        </div>
+        <div class="session-form-actions">
+          <button class="add-btn" onclick="saveSessionForm()">Kaydet</button>
+          <button class="cancel-btn" onclick="closeSessionForm()">Vazgeç</button>
+          <span class="form-error" id="sfError"></span>
+        </div>
+      </div>
+      <div id="sessionLog"></div>
+    </div>
+
+    <!-- STATS -->
+    <div id="view-stats" class="hidden">
+      <div class="section-title">İstatistikler</div>
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-num" id="statTotal">—</div><div class="stat-label">Toplam</div></div>
+        <div class="stat-card"><div class="stat-num" id="statToday">—</div><div class="stat-label">Bugün</div></div>
+        <div class="stat-card"><div class="stat-num" id="statCount">—</div><div class="stat-label">Oturum</div></div>
+        <div class="stat-card"><div class="stat-num" id="statBestStreak">—</div><div class="stat-label">En uzun seri</div></div>
+      </div>
+      <div class="section-title">Hedefler</div>
+      <div class="goal-wrap" id="weekGoal"></div>
+      <div class="goal-form">
+        <label>Günlük hedef (saat)<input class="input" type="number" id="dailyGoalInput" min="0" max="24" step="0.5" placeholder="örn. 4" /></label>
+        <label>Haftalık hedef (saat)<input class="input" type="number" id="weeklyGoalInput" min="0" max="168" step="1" placeholder="örn. 25" /></label>
+        <button class="add-btn" onclick="saveGoals()">Kaydet</button>
+        <span class="form-error" id="goalError"></span>
+      </div>
+      <div class="section-title">Derse Göre</div>
+      <div id="subjectBars"></div>
+      <div class="section-title">Son 7 Gün</div>
+      <div id="weekChart"></div>
+      <div class="goal-form hidden" id="importBox" style="margin-top:24px">
+        <span style="font-size:13px;color:#4a7a9b;flex:1">Eski siteden indirdiğin <b>studyflow-yedek-....json</b> dosyasını seç. Herkesin verisi, aynı kullanıcı adıyla kaydolduğunda hesabına aktarılır.</span>
+        <label class="add-btn" style="cursor:pointer">📥 Eski verileri içe aktar<input type="file" accept=".json,application/json" style="display:none" onchange="importLegacy(this.files[0]); this.value=''" /></label>
+        <span class="form-error" id="importMsg"></span>
+      </div>
+    </div>
+
+    <!-- SUBJECTS -->
+    <div id="view-subjects" class="hidden">
+      <div class="section-header">
+        <div class="section-title">Dersler</div>
+        <button class="add-btn" onclick="toggleAddForm()">+ Ekle</button>
+      </div>
+      <div class="add-sub-form hidden" id="addSubForm">
+        <input class="input" id="newSubName" placeholder="Ders adı..." onkeydown="if(event.key==='Enter')addSubject()" />
+        <div class="color-picker" id="colorPicker"></div>
+        <button class="add-btn" onclick="addSubject()">Kaydet</button>
+      </div>
+      <div id="subjectList"></div>
+    </div>
+
+    <!-- FRIENDS -->
+    <div id="view-friend" class="hidden">
+      <div class="section-title">👥 Arkadaşlar</div>
+      <div class="friend-hint">
+        🌊 Arkadaşına şu linki gönder: <b id="siteLink"></b><br>
+Kendi hesabını açsın; kronometreyi başlattığı an burada görünür.
+      </div>
+      <div id="friendList"><div class="empty-msg">Yükleniyor...</div></div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast hidden" id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script>
+const COLORS = ["#00B4D8","#0096C7","#0077B6","#023E8A","#48CAE4","#90E0EF","#ADE8F4","#CAF0F8","#00D2FF","#5E60CE"];
+const TIMELINE_START = 6, TIMELINE_END = 24, TIMELINE_HOURS = 18;
+
+const DEFAULT_SUBJECTS = [
+  { id: 1, name: "Algoritmalar & VY", color: "#00B4D8" },
+  { id: 2, name: "Veritabanı", color: "#0096C7" },
+  { id: 3, name: "Data Mining", color: "#48CAE4" },
+  { id: 4, name: "Diğer", color: "#90E0EF" },
+];
+const USERNAME_RE = /^[a-z0-9çğıöşü_.-]{2,20}$/;
+const HEARTBEAT_MS = 60 * 1000;        // aktif kronometre bu aralıkla "hâlâ çalışıyorum" der
+const ONLINE_WINDOW_MS = 150 * 1000;   // bu süre içinde sinyal gelmediyse arkadaş çevrimdışı sayılır
+
+let userName = "";
+let sessions = [];
+let subjects = [];
+let activeSub = null;
+let timerStart = null;
+let timerInterval = null;
+let heartbeatInterval = null;
+let friendInterval = null;
+let selectedColor = COLORS[0];
+let currentView = "today";
+let settings = {};          // { dailyGoal: saat, weeklyGoal: saat }
+let viewDate = null;        // Bugün sekmesinde gösterilen gün (YYYY-AA-GG)
+let editingSessionId = null;
+
+function fmt(seconds) {
+  const h = Math.floor(seconds / 3600), m = Math.floor((seconds % 3600) / 60), s = seconds % 60;
+  if (h > 0) return `${h}s ${m}d ${s}sn`;
+  if (m > 0) return `${m}d ${s}sn`;
+  return `${s}sn`;
+}
+function fmtHM(seconds) {
+  const h = Math.floor(seconds / 3600), m = Math.floor((seconds % 3600) / 60);
+  return h > 0 ? `${h}s ${m}d` : `${m}d`;
+}
+function fmtTime(ts) {
+  return new Date(ts).toLocaleTimeString("tr-TR", { hour:"2-digit", minute:"2-digit" });
+}
+// Yerel saate göre YYYY-AA-GG (toISOString UTC kullandığı için gece 00-03 arası önceki güne düşüyordu)
+function dateKey(d) {
+  const pad = n => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+function getToday() {
+  return dateKey(new Date());
+}
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+}
+
+// FIREBASE
+// Bu ayarlar gizli değildir, her web uygulamasında açıkça bulunur.
+// Verileri koruyan şey Firestore güvenlik kurallarıdır (firestore.rules).
+const firebaseConfig = {
+  apiKey: "AIzaSyCgd7TPpHJO1eza7vJuRG38MiNSstDnOm8",
+  authDomain: "studyflow-c0ed6.firebaseapp.com",
+  projectId: "studyflow-c0ed6",
+  storageBucket: "studyflow-c0ed6.firebasestorage.app",
+  messagingSenderId: "468267942982",
+  appId: "1:468267942982:web:e55ead6bfd5d87d0d4b647",
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+const { FieldPath, FieldValue } = firebase.firestore;
+// Bağlantı kopsa da çalışmaya devam etsin; yazılanlar bağlantı gelince gönderilir
+db.enablePersistence({ synchronizeTabs: true }).catch(() => {});
+
+let uid = null;
+let unsubMe = null, unsubFriends = null;
+let friendsData = {};       // arkadaşların belgeleri (uid -> veri)
+let firstSnapshot = true;
+
+function userRef() { return db.collection("users").doc(uid); }
+
+function firebaseError(e) {
+  const map = {
+    "auth/invalid-credential": "E-posta veya şifre hatalı.",
+    "auth/wrong-password": "E-posta veya şifre hatalı.",
+    "auth/user-not-found": "Bu e-posta ile kayıtlı hesap yok.",
+    "auth/invalid-email": "E-posta adresi geçersiz.",
+    "auth/email-already-in-use": "Bu e-posta zaten kayıtlı. Giriş sekmesini dene.",
+    "auth/weak-password": "Şifre en az 6 karakter olmalı.",
+    "auth/missing-password": "Şifre gerekli.",
+    "auth/too-many-requests": "Çok fazla deneme yapıldı. Biraz bekleyip tekrar dene.",
+    "auth/network-request-failed": "İnternet bağlantısı yok.",
+    "permission-denied": "Bu işlem için yetkin yok.",
+    "unavailable": "Sunucuya ulaşılamıyor; bağlantı gelince tekrar denenecek.",
+  };
+  return map[e && e.code] || (e && e.message) || "Bilinmeyen hata";
+}
+
+let toastTimer = null;
+function showToast(msg, isError) {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.toggle("error", !!isError);
+  el.classList.remove("hidden");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.add("hidden"), 3500);
+}
+function saveFailed(e) { showToast("Kaydedilemedi: " + firebaseError(e), true); }
+
+// VERİ YAZMA: her oturum/ders ayrı alan, böylece iki cihaz birbirinin kaydını ezmez
+function toMap(list) { const o = {}; list.forEach(x => { o[x.id] = x; }); return o; }
+function saveSession(s) { return userRef().update(new FieldPath("sessions", String(s.id)), s).catch(saveFailed); }
+function removeSession(id) { return userRef().update(new FieldPath("sessions", String(id)), FieldValue.delete()).catch(saveFailed); }
+function saveSubject(s) { return userRef().update(new FieldPath("subjects", String(s.id)), s).catch(saveFailed); }
+function removeSubject(id) { return userRef().update(new FieldPath("subjects", String(id)), FieldValue.delete()).catch(saveFailed); }
+function setActive(active) { return userRef().update({ active }).catch(() => {}); }
+
+// LOCAL STORAGE (sadece çalışan kronometre için)
+const LS_TIMER = "studyflow.timer";
+function storageGet(key) {
+  try { return JSON.parse(localStorage.getItem(key)); } catch { return null; }
+}
+function storageSet(key, value) {
+  try {
+    if (value === null) localStorage.removeItem(key);
+    else localStorage.setItem(key, JSON.stringify(value));
+  } catch {}
+}
+
+// GİRİŞ / KAYIT
+let authMode = "login";     // login | register | setup (hesap var ama kullanıcı adı seçilmemiş)
+const AUTH_BUTTON = { login: "Giriş yap →", register: "Kayıt ol →", setup: "Devam →" };
+let registering = false;
+let timelineBuilt = false;
+
+function showScreen(id) {
+  ["loadingScreen", "loginScreen", "appScreen"].forEach(s => document.getElementById(s).classList.toggle("hidden", s !== id));
+}
+
+function showLoginError(msg, ok) {
+  const el = document.getElementById("loginError");
+  el.textContent = msg;
+  el.classList.toggle("ok", !!ok);
+  el.classList.toggle("hidden", !msg);
+}
+
+function setAuthMode(mode) {
+  authMode = mode;
+  const show = (id, on) => document.getElementById(id).classList.toggle("hidden", !on);
+  document.getElementById("tabLogin").classList.toggle("active", mode === "login");
+  document.getElementById("tabRegister").classList.toggle("active", mode === "register");
+  show("authTabs", mode !== "setup");
+  show("emailInput", mode !== "setup");
+  show("passwordInput", mode !== "setup");
+  show("usernameInput", mode !== "login");
+  show("resetLink", mode === "login");
+  show("setupLogout", mode === "setup");
+  document.getElementById("passwordInput").autocomplete = mode === "register" ? "new-password" : "current-password";
+  document.getElementById("loginBtn").textContent = AUTH_BUTTON[mode];
+  document.getElementById("authSub").innerHTML = mode === "setup"
+    ? "Son bir adım: arkadaşlarının seni göreceği<br>kullanıcı adını seç"
+    : "Çalışma saatlerini takip et,<br>arkadaşınla gerçek zamanlı senkronize ol";
+  document.getElementById("authHint").innerHTML = mode === "login" ? ""
+    : "Eski StudyFlow'daki kullanıcı adını yazarsan<br>eski çalışma kayıtların hesabına aktarılır.";
+  showLoginError("");
+}
+
+["emailInput", "usernameInput", "passwordInput"].forEach(id =>
+  document.getElementById(id).addEventListener("keydown", e => { if (e.key === "Enter") submitAuth(); }));
+
+function readUsername() {
+  return document.getElementById("usernameInput").value.trim().toLocaleLowerCase("tr-TR");
+}
+
+async function checkUsername(name) {
+  if (!USERNAME_RE.test(name)) return "Kullanıcı adı 2-20 karakter olmalı; harf, rakam, _ . - kullanabilirsin.";
+  const taken = await db.collection("usernames").doc(name).get();
+  return taken.exists ? "Bu kullanıcı adı alınmış, başka bir tane dene." : null;
+}
+
+async function submitAuth() {
+  const btn = document.getElementById("loginBtn");
+  const email = document.getElementById("emailInput").value.trim().toLowerCase();
+  const pass = document.getElementById("passwordInput").value;
+  const name = readUsername();
+  showLoginError("");
+  if (authMode === "login" && (!email || !pass)) return showLoginError("E-posta ve şifreni gir.");
+  if (authMode === "register" && (!email || !pass || !name)) return showLoginError("Tüm alanları doldur.");
+  if (authMode === "register" && pass.length < 6) return showLoginError("Şifre en az 6 karakter olmalı.");
+  if (authMode === "setup" && !name) return showLoginError("Bir kullanıcı adı yaz.");
+  btn.disabled = true;
+  btn.textContent = "Bekle...";
+  try {
+    if (authMode === "login") {
+      await auth.signInWithEmailAndPassword(email, pass);
+      // Devamını oturum dinleyicisi (onAuthStateChanged) yapar
+    } else {
+      const problem = await checkUsername(name);
+      if (problem) return showLoginError(problem);
+      if (authMode === "register") {
+        registering = true;
+        const cred = await auth.createUserWithEmailAndPassword(email, pass);
+        uid = cred.user.uid;
+      }
+      const profile = await claimUsername(name);
+      registering = false;
+      enterApp(profile);
+    }
+  } catch (e) {
+    if (registering && auth.currentUser) {
+      // Hesap açıldı ama kullanıcı adı alınamadı: kullanıcı adı seçme adımına geç
+      registering = false;
+      showScreen("loginScreen");
+      setAuthMode("setup");
+    }
+    registering = false;
+    showLoginError(e.code === "permission-denied" ? "Bu kullanıcı adı alınmış, başka bir tane dene." : firebaseError(e));
+  } finally {
+    btn.disabled = false;
+    btn.textContent = AUTH_BUTTON[authMode];
+  }
+}
+
+async function resetPassword() {
+  const email = document.getElementById("emailInput").value.trim().toLowerCase();
+  if (!email) return showLoginError('Önce e-posta adresini yaz, sonra "Şifremi unuttum"a bas.');
+  try {
+    await auth.sendPasswordResetEmail(email);
+    showLoginError("Şifre sıfırlama bağlantısı gönderildi. Gelen kutunu ve spam klasörünü kontrol et.", true);
+  } catch (e) {
+    showLoginError(firebaseError(e));
+  }
+}
+
+// Kullanıcı adını hesaba bağlar ve boş profili oluşturur (ikisi birlikte ya da hiç)
+async function claimUsername(name) {
+  const profile = { username: name, sessions: {}, subjects: toMap(DEFAULT_SUBJECTS), settings: {}, active: null, createdAt: Date.now() };
+  const batch = db.batch();
+  batch.set(db.collection("usernames").doc(name), { uid });
+  batch.set(userRef(), profile);
+  await batch.commit();
+  return profile;
+}
+
+// Eski siteden aktarılmış veri bu kullanıcı adına bekliyorsa hesaba ekle
+async function mergeLegacy() {
+  const ref = db.collection("legacy").doc(userName);
+  const snap = await ref.get().catch(() => null);
+  if (!snap || !snap.exists) return;
+  const old = snap.data();
+  const oldSubjects = old.subjects || {};
+  const hasOldSubjects = Object.keys(oldSubjects).length > 0;
+  const onlyDefaults = subjects.every(s => DEFAULT_SUBJECTS.some(d => d.id === s.id));
+  // Hiç dokunulmamış varsayılan dersler yerine eski dersler gelsin; aksi halde eskiler yanına eklensin
+  if (hasOldSubjects && onlyDefaults) await userRef().update({ subjects: oldSubjects });
+  const update = { sessions: old.sessions || {} };
+  if (hasOldSubjects && !onlyDefaults) update.subjects = oldSubjects;
+  if (!settings.dailyGoal && !settings.weeklyGoal && old.settings) update.settings = old.settings;
+  await userRef().set(update, { merge: true });
+  await ref.delete();
+  showToast(`Eski kayıtların aktarıldı ✓ (${Object.keys(old.sessions || {}).length} oturum)`);
+}
+
+auth.onAuthStateChanged(async user => {
+  if (registering) return;
+  if (!user) {
+    cleanup();
+    showScreen("loginScreen");
+    setAuthMode("login");
+    return;
+  }
+  uid = user.uid;
+  try {
+    const snap = await userRef().get();
+    if (snap.exists) return enterApp(snap.data());
+    showScreen("loginScreen");
+    setAuthMode("setup");
+  } catch (e) {
+    showScreen("loginScreen");
+    setAuthMode("login");
+    showLoginError("Hesap bilgileri alınamadı: " + firebaseError(e));
+  }
+});
+
+function enterApp(profile) {
+  userName = profile.username;
+  showScreen("appScreen");
+  document.getElementById("userBadge").textContent = "@" + userName;
+  document.getElementById("siteLink").textContent = location.origin + location.pathname.replace(/index\.html$/, "");
+  buildColorPicker();
+  if (!timelineBuilt) { buildTimeline(); timelineBuilt = true; }
+  viewDate = getToday();
+  applyProfile(profile);
+  firstSnapshot = true;
+  if (unsubMe) unsubMe();
+  // Kendi belgemizi dinle: başka cihazda yapılan değişiklik de anında gelir
+  unsubMe = userRef().onSnapshot(snap => {
+    if (!snap.exists) return;
+    applyProfile(snap.data());
+    if (firstSnapshot) {
+      firstSnapshot = false;
+      resumeTimer();
+      mergeLegacy().catch(saveFailed);
+    }
+  }, e => showToast("Veriler alınamadı: " + firebaseError(e), true));
+  setView(currentView);
+}
+
+function applyProfile(p) {
+  sessions = Object.values(p.sessions || {});
+  subjects = Object.values(p.subjects || {}).sort((a, b) => a.id - b.id);
+  const goalsChanged = JSON.stringify(settings) !== JSON.stringify(p.settings || {});
+  settings = p.settings || {};
+  if (goalsChanged) {
+    document.getElementById("dailyGoalInput").value = settings.dailyGoal || "";
+    document.getElementById("weeklyGoalInput").value = settings.weeklyGoal || "";
+  }
+  render();
+}
+
+function cleanup() {
+  if (unsubMe) unsubMe();
+  if (unsubFriends) unsubFriends();
+  unsubMe = unsubFriends = null;
+  clearInterval(friendInterval);
+  uid = null; userName = ""; sessions = []; subjects = []; settings = {}; friendsData = {};
+}
+
+async function logout() {
+  if (activeSub) stopTimer();
+  cleanup();
+  await auth.signOut();
+}
+
+// Sayfa yenilendiyse/kapandıysa yarım kalan zamanlayıcıyı kaldığı yerden sürdür
+function resumeTimer() {
+  const t = storageGet(LS_TIMER);
+  if (!t || t.user !== userName || activeSub) return;
+  const sub = subjects.find(s => s.id === t.subjectId) || { id: t.subjectId, name: t.subjectName, color: t.color };
+  startTimer(sub, t.start);
+}
+
+// TIMER
+function startTimer(sub, start = Date.now()) {
+  if (activeSub) stopTimer();
+  activeSub = sub;
+  timerStart = start;
+  storageSet(LS_TIMER, { user: userName, subjectId: sub.id, subjectName: sub.name, color: sub.color, start });
+  updateTimerDisplay();
+  document.getElementById("activeBar").classList.remove("hidden");
+  document.getElementById("activeDot").style.background = sub.color;
+  document.getElementById("activeLabel").textContent = sub.name;
+  timerInterval = setInterval(updateTimerDisplay, 1000);
+  sendHeartbeat();
+  heartbeatInterval = setInterval(sendHeartbeat, HEARTBEAT_MS);
+  renderSubjectGrid();
+}
+
+function stopTimer() {
+  if (!activeSub || !timerStart) return;
+  clearInterval(timerInterval);
+  clearInterval(heartbeatInterval);
+  const end = Date.now();
+  const duration = Math.floor((end - timerStart) / 1000);
+  if (duration >= 10) {
+    const s = { id: Date.now(), subjectId: activeSub.id, subjectName: activeSub.name, color: activeSub.color, start: timerStart, end, duration, date: dateKey(new Date(timerStart)) };
+    sessions.push(s);
+    saveSession(s);
+  }
+  storageSet(LS_TIMER, null);
+  setActive(null);
+  activeSub = null; timerStart = null;
+  document.getElementById("activeBar").classList.add("hidden");
+  render();
+}
+
+function updateTimerDisplay() {
+  const elapsed = Math.floor((Date.now() - timerStart) / 1000);
+  document.getElementById("activeTime").textContent = fmt(elapsed);
+}
+
+function sendHeartbeat() {
+  if (!activeSub) return;
+  setActive({ subjectName: activeSub.name, color: activeSub.color, start: timerStart, alive: Date.now() });
+}
+
+// RENDER
+function render() {
+  renderDayHeader();
+  renderGoals();
+  renderSubjectGrid();
+  renderTimeline();
+  renderSessionLog();
+  renderStats();
+  renderSubjectList();
+  updateTodayTotal();
+}
+
+function todaySessions() { return sessions.filter(s => s.date === getToday()); }
+function viewSessions() { return sessions.filter(s => s.date === viewDate).sort((a,b) => a.start - b.start); }
+function secondsOn(key) { return sessions.filter(s => s.date === key).reduce((a,s) => a+s.duration, 0); }
+function totalSeconds() { return sessions.reduce((a,s) => a+s.duration, 0); }
+function todaySeconds() { return todaySessions().reduce((a,s) => a+s.duration, 0); }
+
+function updateTodayTotal() {
+  document.getElementById("todayTotal").textContent = fmt(secondsOn(viewDate));
+}
+
+function renderSubjectGrid() {
+  const g = document.getElementById("subjectGrid");
+  g.innerHTML = subjects.map(sub => {
+    const isRunning = activeSub && activeSub.id === sub.id;
+    return `<button class="subject-btn ${isRunning ? 'running' : ''}"
+      style="border-color:${esc(sub.color)};background:${isRunning ? esc(sub.color) : 'rgba(0,100,180,0.08)'}"
+      onclick="handleSubjectClick(${sub.id})">
+      <span class="subject-dot" style="background:${esc(sub.color)};opacity:${isRunning?0:1}"></span>
+      ${esc(sub.name)}
+      ${isRunning ? '<span class="pulsing">●</span>' : ''}
+    </button>`;
+  }).join("");
+}
+
+function handleSubjectClick(id) {
+  const sub = subjects.find(s => s.id === id);
+  if (activeSub && activeSub.id === id) stopTimer();
+  else startTimer(sub);
+}
+
+function buildTimeline() {
+  const track = document.getElementById("timelineTrack");
+  for (let i = 0; i <= TIMELINE_HOURS; i++) {
+    const el = document.createElement("div");
+    el.className = "timeline-hour";
+    el.style.left = `${(i / TIMELINE_HOURS) * 100}%`;
+    el.textContent = `${TIMELINE_START + i}:00`;
+    track.insertBefore(el, document.getElementById("timelineBar"));
+  }
+}
+
+function renderTimeline() {
+  const bar = document.getElementById("timelineBar");
+  bar.innerHTML = viewSessions().map(s => {
+    const sd = new Date(s.start), ed = new Date(s.end);
+    const sh = sd.getHours() + sd.getMinutes()/60;
+    const eh = ed.getHours() + ed.getMinutes()/60;
+    const left = Math.max(0, ((sh - TIMELINE_START) / TIMELINE_HOURS) * 100);
+    const width = Math.max(0.5, ((eh - sh) / TIMELINE_HOURS) * 100);
+    return `<div class="timeline-block" style="left:${left}%;width:${width}%;background:${esc(s.color)}" title="${esc(s.subjectName)} — ${fmtTime(s.start)} → ${fmtTime(s.end)} (${fmt(s.duration)})"></div>`;
+  }).join("");
+}
+
+function renderSessionLog() {
+  const log = document.getElementById("sessionLog");
+  const ts = [...viewSessions()].reverse();
+  if (ts.length === 0) { log.innerHTML = `<div class="empty-msg">${viewDate === getToday() ? "Henüz kayıt yok. Bir ders seçip zamanlayıcıyı başlat!" : "Bu gün için kayıt yok."}</div>`; return; }
+  log.innerHTML = ts.map(s => `
+    <div class="session-row" onclick="openSessionForm(${s.id})">
+      <div class="session-color-bar" style="background:${esc(s.color)}"></div>
+      <div class="session-info">
+        <div class="session-name">${esc(s.subjectName)}${s.manual ? '<span class="session-manual">elle</span>' : ''}</div>
+        <div class="session-time">${fmtTime(s.start)} → ${fmtTime(s.end)}</div>
+      </div>
+      <div class="session-dur">${fmt(s.duration)}</div>
+      <button class="delete-btn" onclick="event.stopPropagation(); deleteSession(${s.id})">×</button>
+    </div>`).join("");
+}
+
+function deleteSession(id) {
+  if (!confirm("Bu oturum silinsin mi?")) return;
+  if (editingSessionId === id) closeSessionForm();
+  sessions = sessions.filter(s => s.id !== id);
+  removeSession(id);
+  render();
+}
+
+function renderStats() {
+  document.getElementById("statTotal").textContent = fmt(totalSeconds());
+  document.getElementById("statToday").textContent = fmt(todaySeconds());
+  document.getElementById("statCount").textContent = sessions.length;
+  document.getElementById("statBestStreak").textContent = `${bestStreak(sessions)} gün`;
+  const maxT = Math.max(...subjects.map(sub => sessions.filter(s => s.subjectId === sub.id).reduce((a,s)=>a+s.duration,0)), 1);
+  document.getElementById("subjectBars").innerHTML = subjects
+    .map(sub => ({ ...sub, total: sessions.filter(s=>s.subjectId===sub.id).reduce((a,s)=>a+s.duration,0) }))
+    .filter(s => s.total > 0)
+    .sort((a,b) => b.total - a.total)
+    .map(sub => `
+      <div class="bar-row">
+        <div class="bar-label"><span class="subject-dot" style="background:${esc(sub.color)}"></span>${esc(sub.name)}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${(sub.total/maxT)*100}%;background:${esc(sub.color)}"></div></div>
+        <div class="bar-dur">${fmt(sub.total)}</div>
+      </div>`).join("") || '<div class="empty-msg">Henüz veri yok.</div>';
+
+  document.getElementById("weekChart").innerHTML = Array.from({length:7},(_,i)=>{
+    const d = new Date(); d.setDate(d.getDate()-i);
+    const key = dateKey(d);
+    const daySubs = sessions.filter(s=>s.date===key);
+    const dayTotal = daySubs.reduce((a,s)=>a+s.duration,0);
+    const label = d.toLocaleDateString("tr-TR",{weekday:"short",day:"numeric"});
+    return `<div class="day-row">
+      <div class="day-label">${label}</div>
+      <div class="day-bar">${daySubs.map(s=>`<div class="day-block" style="width:${Math.max(4,(s.duration/3600)*200)}px;background:${esc(s.color)}" title="${esc(s.subjectName)}"></div>`).join("")}</div>
+      <div class="day-total">${dayTotal > 0 ? fmt(dayTotal) : "—"}</div>
+    </div>`;
+  }).join("");
+}
+
+// GÜN GEZİNME
+function parseKey(key) {
+  const [y, m, d] = key.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+function shiftDay(n) {
+  const d = parseKey(viewDate);
+  d.setDate(d.getDate() + n);
+  const key = dateKey(d);
+  if (key > getToday()) return;
+  viewDate = key;
+  closeSessionForm();
+  render();
+}
+function goToday() {
+  viewDate = getToday();
+  closeSessionForm();
+  render();
+}
+function renderDayHeader() {
+  const isToday = viewDate === getToday();
+  const d = parseKey(viewDate);
+  document.getElementById("todayTitle").textContent = isToday
+    ? "Bugün — " + d.toLocaleDateString("tr-TR", { day:"numeric", month:"long" })
+    : d.toLocaleDateString("tr-TR", { weekday:"long", day:"numeric", month:"long" });
+  document.getElementById("nextDayBtn").disabled = isToday;
+  document.getElementById("backToToday").classList.toggle("hidden", isToday);
+  const streak = streakOf(sessions);
+  const badge = document.getElementById("streakBadge");
+  badge.textContent = streak > 0 ? `🔥 ${streak} gün seri` : "Seri yok";
+  badge.classList.toggle("cold", streak === 0);
+  badge.title = streak > 0 && !todaySessions().length ? "Bugün çalışırsan seri devam eder" : "";
+}
+
+// SERİ: üst üste en az bir oturum olan günler
+function streakOf(list) {
+  const days = new Set(list.map(s => s.date));
+  const d = new Date();
+  if (!days.has(dateKey(d))) d.setDate(d.getDate() - 1); // bugün henüz çalışılmadıysa seri dünden sayılır
+  let n = 0;
+  while (days.has(dateKey(d))) { n++; d.setDate(d.getDate() - 1); }
+  return n;
+}
+function bestStreak(list) {
+  const days = [...new Set(list.map(s => s.date))].sort();
+  let best = 0, run = 0, prev = null;
+  days.forEach(key => {
+    if (prev) {
+      const p = parseKey(prev);
+      p.setDate(p.getDate() + 1);
+      run = dateKey(p) === key ? run + 1 : 1;
+    } else run = 1;
+    best = Math.max(best, run);
+    prev = key;
+  });
+  return best;
+}
+
+// HEDEFLER
+function goalBar(label, done, goalHours) {
+  const goal = goalHours * 3600;
+  const pct = Math.min(100, Math.round((done / goal) * 100));
+  const reached = done >= goal;
+  return `<div class="goal-text"><span>${label}: <b>${fmtHM(done)}</b> / ${goalHours} saat</span>
+      <span>${reached ? "✅ Hedef tamam!" : `%${pct} · ${fmtHM(goal - done)} kaldı`}</span></div>
+    <div class="goal-track"><div class="goal-fill ${reached ? "done" : ""}" style="width:${pct}%"></div></div>`;
+}
+function weekStartKey() {
+  const d = new Date();
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); // pazartesi
+  return dateKey(d);
+}
+function renderGoals() {
+  const day = document.getElementById("dayGoal");
+  day.innerHTML = settings.dailyGoal > 0
+    ? goalBar(viewDate === getToday() ? "Günlük hedef" : "Günün hedefi", secondsOn(viewDate), settings.dailyGoal)
+    : `<div class="goal-text"><span>Günlük hedef koymak için <a href="#" onclick="setView('stats');return false" style="color:#48CAE4">İstatistik → Hedefler</a></span></div>`;
+  const start = weekStartKey();
+  const weekDone = sessions.filter(s => s.date >= start).reduce((a,s) => a+s.duration, 0);
+  document.getElementById("weekGoal").innerHTML = settings.weeklyGoal > 0
+    ? goalBar("Bu hafta", weekDone, settings.weeklyGoal)
+    : `<div class="goal-text"><span>Bu hafta: <b>${fmt(weekDone)}</b></span></div>`;
+}
+async function saveGoals() {
+  const msg = document.getElementById("goalError");
+  const daily = parseFloat(document.getElementById("dailyGoalInput").value) || 0;
+  const weekly = parseFloat(document.getElementById("weeklyGoalInput").value) || 0;
+  msg.style.color = "";
+  if (daily < 0 || daily > 24 || weekly < 0 || weekly > 168) { msg.textContent = "Geçersiz değer."; return; }
+  settings = { ...settings, dailyGoal: daily, weeklyGoal: weekly };
+  msg.textContent = "";
+  render();
+  try { await userRef().update({ settings }); } catch (e) { return saveFailed(e); }
+  msg.style.color = "#48CAE4";
+  msg.textContent = "Kaydedildi ✓";
+  setTimeout(() => { msg.textContent = ""; msg.style.color = ""; }, 2000);
+}
+
+// OTURUM EKLE / DÜZENLE
+function timeStr(ts) {
+  const d = new Date(ts);
+  return `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+}
+function openSessionForm(id) {
+  const s = id ? sessions.find(x => x.id === id) : null;
+  editingSessionId = s ? s.id : null;
+  const options = subjects.map(sub => ({ id: sub.id, name: sub.name }));
+  if (s && !subjects.some(sub => sub.id === s.subjectId)) options.push({ id: s.subjectId, name: s.subjectName + " (silinmiş)" });
+  const sel = document.getElementById("sfSubject");
+  sel.innerHTML = options.map(o => `<option value="${o.id}">${esc(o.name)}</option>`).join("");
+  if (s) {
+    sel.value = String(s.subjectId);
+    document.getElementById("sfStart").value = timeStr(s.start);
+    document.getElementById("sfEnd").value = timeStr(s.end);
+  } else {
+    const end = viewDate === getToday() ? Date.now() : parseKey(viewDate).setHours(12, 0);
+    document.getElementById("sfStart").value = timeStr(end - 3600 * 1000);
+    document.getElementById("sfEnd").value = timeStr(end);
+  }
+  document.getElementById("sessionFormTitle").textContent = s ? "Oturumu düzenle" : "Oturum ekle";
+  document.getElementById("sfError").textContent = "";
+  document.getElementById("sessionForm").classList.remove("hidden");
+  document.getElementById("sessionForm").scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+function closeSessionForm() {
+  editingSessionId = null;
+  document.getElementById("sessionForm").classList.add("hidden");
+}
+function saveSessionForm() {
+  const err = document.getElementById("sfError");
+  const startStr = document.getElementById("sfStart").value, endStr = document.getElementById("sfEnd").value;
+  if (!startStr || !endStr) { err.textContent = "Başlangıç ve bitiş saatini gir."; return; }
+  const existing = editingSessionId ? sessions.find(x => x.id === editingSessionId) : null;
+  const dayKey = existing ? existing.date : viewDate;
+  const [sh, sm] = startStr.split(":").map(Number), [eh, em] = endStr.split(":").map(Number);
+  const start = parseKey(dayKey).setHours(sh, sm, 0, 0);
+  let end = parseKey(dayKey).setHours(eh, em, 0, 0);
+  if (end <= start) end += 24 * 3600 * 1000; // gece yarısını geçen oturum
+  const duration = Math.round((end - start) / 1000);
+  if (duration > 16 * 3600) { err.textContent = "Oturum 16 saatten uzun olamaz."; return; }
+  if (end > Date.now() + 60 * 1000) { err.textContent = "Bitiş saati gelecekte olamaz."; return; }
+  const subId = Number(document.getElementById("sfSubject").value);
+  const sub = subjects.find(x => x.id === subId) || (existing && { id: existing.subjectId, name: existing.subjectName, color: existing.color });
+  if (!sub) { err.textContent = "Ders seç."; return; }
+  const data = { subjectId: sub.id, subjectName: sub.name, color: sub.color, start, end, duration, date: dateKey(new Date(start)) };
+  let saved;
+  if (existing) saved = Object.assign(existing, data, { edited: true });
+  else sessions.push(saved = { id: Date.now(), ...data, manual: true });
+  closeSessionForm();
+  saveSession(saved);
+  render();
+}
+
+// SUBJECTS VIEW
+function buildColorPicker() {
+  document.getElementById("colorPicker").innerHTML = COLORS.map(c =>
+    `<div class="color-swatch ${c===selectedColor?'selected':''}" style="background:${c}" onclick="selectColor('${c}')"></div>`
+  ).join("");
+}
+
+function selectColor(c) {
+  selectedColor = c;
+  document.querySelectorAll(".color-swatch").forEach(el => {
+    el.classList.toggle("selected", el.style.background === c || el.style.backgroundColor === c);
+  });
+}
+
+function toggleAddForm() {
+  document.getElementById("addSubForm").classList.toggle("hidden");
+}
+
+function addSubject() {
+  const name = document.getElementById("newSubName").value.trim();
+  if (!name) return;
+  const sub = { id: Date.now(), name, color: selectedColor };
+  subjects.push(sub);
+  document.getElementById("newSubName").value = "";
+  document.getElementById("addSubForm").classList.add("hidden");
+  saveSubject(sub);
+  render();
+}
+
+function renderSubjectList() {
+  document.getElementById("subjectList").innerHTML = subjects.map(sub => {
+    const total = sessions.filter(s=>s.subjectId===sub.id).reduce((a,s)=>a+s.duration,0);
+    return `<div class="subject-row">
+      <div class="subject-row-dot" style="background:${esc(sub.color)}"></div>
+      <div class="subject-row-name">${esc(sub.name)}</div>
+      <div class="subject-row-stat">${fmt(total)}</div>
+      <button class="delete-btn" onclick="deleteSubject(${sub.id})">×</button>
+    </div>`;
+  }).join("");
+}
+
+function deleteSubject(id) {
+  subjects = subjects.filter(s => s.id !== id);
+  removeSubject(id);
+  render();
+}
+
+// FRIEND VIEW
+function watchFriends() {
+  if (unsubFriends) return;
+  unsubFriends = db.collection("users").onSnapshot(snap => {
+    friendsData = {};
+    snap.forEach(doc => { if (doc.id !== uid) friendsData[doc.id] = doc.data(); });
+    renderFriends();
+  }, e => showToast("Arkadaşlar alınamadı: " + firebaseError(e), true));
+}
+
+function renderFriends() {
+  const list = document.getElementById("friendList");
+  const friends = Object.values(friendsData).map(d => [d.username, d]).sort((a, b) => a[0].localeCompare(b[0], "tr"));
+  if (friends.length === 0) { list.innerHTML = '<div class="empty-msg">Henüz başka kullanıcı yok. Arkadaşına adresi gönder!</div>'; return; }
+  list.innerHTML = friends.map(([name, udata]) => {
+    const fSessions = udata.sessions ? Object.values(udata.sessions) : [];
+    const fToday = fSessions.filter(s => s.date === getToday());
+    const fTotal = fToday.reduce((a,s)=>a+s.duration,0);
+    const last = fToday[fToday.length-1];
+    const active = udata.active;
+    const isActive = active && (Date.now() - active.alive) < ONLINE_WINDOW_MS;
+    const activeElapsed = isActive ? fmt(Math.floor((Date.now() - active.start) / 1000)) : "";
+    const fBar = fToday.map(s => {
+      const sd = new Date(s.start), ed = new Date(s.end);
+      const sh = sd.getHours() + sd.getMinutes()/60;
+      const eh = ed.getHours() + ed.getMinutes()/60;
+      const left = Math.max(0,((sh-TIMELINE_START)/TIMELINE_HOURS)*100);
+      const width = Math.max(0.5,((eh-sh)/TIMELINE_HOURS)*100);
+      return `<div class="timeline-block" style="left:${left}%;width:${width}%;background:${esc(s.color)}" title="${esc(s.subjectName)} (${fmt(s.duration)})"></div>`;
+    }).join("");
+    return `<div class="friend-card">
+      <div class="friend-header">
+        <div class="friend-name">
+          <span class="online-dot" style="background:${isActive?'#48CAE4':'#1a3a5c'}"></span>
+          @${esc(name)}${streakOf(fSessions) > 1 ? `<span class="friend-streak">🔥 ${streakOf(fSessions)}</span>` : ""}
+        </div>
+        <div class="friend-total">${fmt(fTotal)} bugün</div>
+      </div>
+      ${isActive && active ? `<div class="friend-active-box">
+        <span class="friend-active-dot" style="background:${esc(active.color)}"></span>
+        <span class="friend-active-name" style="color:${esc(active.color)}">${esc(active.subjectName)}</span>
+        <span class="friend-active-since"> üzerinde çalışıyor —</span>
+        <span class="friend-active-timer"> ${activeElapsed}</span>
+        <span class="friend-active-since"> (${fmtTime(active.start)}'den beri)</span>
+      </div>` : last ? `<div class="friend-last">Son: <span style="color:${esc(last.color)}">${esc(last.subjectName)}</span> — ${fmtTime(last.start)}</div>` : ""}
+      <div class="friend-timeline">${fBar}</div>
+    </div>`;
+  }).join("");
+}
+
+// VIEW SWITCHER
+// ESKİ SİTEDEN TAŞIMA (sadece bircan): yedek dosyasındaki herkesin verisi legacy/{kullanıcı adı} belgesine yazılır
+async function importLegacy(file) {
+  const msg = document.getElementById("importMsg");
+  msg.style.color = "";
+  if (!file) return;
+  try {
+    const json = JSON.parse(await file.text());
+    const users = json.users || json;
+    const batch = db.batch();
+    const done = [], skipped = [];
+    Object.entries(users).forEach(([raw, u]) => {
+      const name = String(raw).trim().toLocaleLowerCase("tr-TR");
+      const count = Object.keys((u && u.sessions) || {}).length;
+      if (!USERNAME_RE.test(name) || (!count && !Object.keys((u && u.subjects) || {}).length)) { skipped.push(name); return; }
+      batch.set(db.collection("legacy").doc(name), { sessions: u.sessions || {}, subjects: u.subjects || {}, settings: u.settings || {}, importedAt: Date.now() });
+      done.push(`${name} (${count})`);
+    });
+    await batch.commit();
+    msg.style.color = "#48CAE4";
+    msg.textContent = `Aktarıldı: ${done.join(", ")}` + (skipped.length ? ` · Boş/geçersiz, atlandı: ${skipped.join(", ")}` : "");
+    await mergeLegacy();
+  } catch (e) {
+    msg.textContent = "İçe aktarılamadı: " + (e.code ? firebaseError(e) : e.message);
+  }
+}
+
+function setView(v) {
+  document.getElementById("importBox").classList.toggle("hidden", userName !== "bircan");
+  currentView = v;
+  ["today","stats","subjects","friend"].forEach(name => {
+    document.getElementById(`view-${name}`).classList.toggle("hidden", name !== v);
+  });
+  document.querySelectorAll(".nav-btn").forEach((btn, i) => {
+    btn.classList.toggle("active", ["today","stats","subjects","friend"][i] === v);
+  });
+  if (v === "friend") {
+    watchFriends();
+    renderFriends();
+    clearInterval(friendInterval);
+    friendInterval = setInterval(renderFriends, 5000);  // sadece "kaç dakikadır çalışıyor" yazısını günceller
+  } else {
+    clearInterval(friendInterval);
+    if (unsubFriends) { unsubFriends(); unsubFriends = null; }
+  }
+  if (v === "stats") renderStats();
+}
+
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+// Oturum Firebase tarafından hatırlanır; açılışta onAuthStateChanged girişi tamamlar.
+</script>
+</body>
+</html>

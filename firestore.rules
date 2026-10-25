@@ -1,0 +1,55 @@
+rules_version = '2';
+
+// StudyFlow güvenlik kuralları
+// Firebase Console > Firestore Database > Kurallar (Rules) sekmesine olduğu gibi yapıştırılır.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+    function usernameDoc(name) {
+      return /databases/$(database)/documents/usernames/$(name);
+    }
+    // Bu kullanıcı adı oturum açan kişiye mi ait?
+    function ownsUsername(name) {
+      return signedIn() && exists(usernameDoc(name)) && get(usernameDoc(name)).data.uid == request.auth.uid;
+    }
+    // Eski siteden veri aktarma yetkisi sadece "bircan" kullanıcı adının sahibinde
+    function isAdmin() {
+      return ownsUsername('bircan');
+    }
+
+    // Kullanıcı adı -> hesap eşlemesi. Kayıtta boş mu diye bakılabilsin diye herkes tek tek okuyabilir.
+    match /usernames/{name} {
+      allow get: if true;
+      allow list: if false;
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['uid'])
+        && request.resource.data.uid == request.auth.uid
+        && name.matches('^[a-z0-9çğıöşü_.-]{2,20}$')
+        // Her hesap tek kullanıcı adı alabilir
+        && !exists(/databases/$(database)/documents/users/$(request.auth.uid));
+      allow update, delete: if false;
+    }
+
+    // Kullanıcı verisi: giriş yapan herkes okur (arkadaşlar sekmesi), sadece sahibi yazar.
+    match /users/{uid} {
+      allow read: if signedIn();
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.username is string
+        // Kullanıcı adı aynı toplu yazımda bu hesaba bağlanıyor olmalı
+        && getAfter(usernameDoc(request.resource.data.username)).data.uid == request.auth.uid;
+      allow update: if signedIn() && request.auth.uid == uid
+        && request.resource.data.username == resource.data.username;
+      allow delete: if false;
+    }
+
+    // Eski siteden aktarılan, sahibinin kaydolmasını bekleyen veriler
+    match /legacy/{name} {
+      allow read: if signedIn();
+      allow create, update: if isAdmin();
+      allow delete: if isAdmin() || ownsUsername(name);
+    }
+  }
+}
