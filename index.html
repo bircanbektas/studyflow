@@ -61,7 +61,7 @@
     .log-title { font-size: 14px; color: #4a7a9b; margin-bottom: 10px; }
     .session-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: #031525; border-radius: 10px; margin-bottom: 8px; border: 1px solid #0a3a5c; }
     .session-color-bar { width: 4px; height: 36px; border-radius: 2px; flex-shrink: 0; }
-    .session-info { flex: 1; }
+    .session-info { flex: 1; min-width: 0; }
     .session-name { font-weight: 600; font-size: 14px; color: #ADE8F4; }
     .session-time { font-size: 12px; color: #2a5a7c; margin-top: 2px; }
     .session-dur { font-weight: 700; color: #90E0EF; font-size: 15px; }
@@ -168,6 +168,8 @@
     .form-error { font-size: 13px; color: #ff6b6b; }
     .session-row { cursor: pointer; }
     .session-row:hover { border-color: #0077B6; }
+    .session-note { font-size: 13px; color: #6fa3c4; margin-top: 4px; overflow-wrap: anywhere; }
+    .session-form-note { grid-column: 1 / -1; }
     .session-manual { font-size: 11px; color: #4a7a9b; border: 1px solid #0a3a5c; border-radius: 6px; padding: 0 5px; margin-left: 6px; font-weight: 400; }
     .friend-streak { font-size: 12px; color: #ffb347; margin-left: 4px; }
 
@@ -286,6 +288,7 @@
           <label>Ders<select class="input" id="sfSubject"></select></label>
           <label>Başlangıç<input class="input" type="time" id="sfStart" /></label>
           <label>Bitiş<input class="input" type="time" id="sfEnd" /></label>
+          <label class="session-form-note">Neye çalıştın? (isteğe bağlı)<input class="input" id="sfNote" maxlength="200" placeholder="örn: 3. ünite, soru çözümü" onkeydown="if(event.key==='Enter')saveSessionForm()" /></label>
         </div>
         <div class="session-form-actions">
           <button class="add-btn" onclick="saveSessionForm()">Kaydet</button>
@@ -781,6 +784,7 @@ function renderSessionLog() {
       <div class="session-info">
         <div class="session-name">${esc(s.subjectName)}${s.manual ? '<span class="session-manual">elle</span>' : ''}</div>
         <div class="session-time">${fmtTime(s.start)} → ${fmtTime(s.end)}</div>
+        ${s.note ? `<div class="session-note">${esc(s.note)}</div>` : ""}
       </div>
       <div class="session-dur">${fmt(s.duration)}</div>
       <button class="delete-btn" onclick="event.stopPropagation(); deleteSession(${s.id})">×</button>
@@ -946,6 +950,7 @@ function openSessionForm(id) {
     document.getElementById("sfEnd").value = timeStr(end);
   }
   document.getElementById("sessionFormTitle").textContent = s ? "Oturumu düzenle" : "Oturum ekle";
+  document.getElementById("sfNote").value = s && s.note ? s.note : "";
   document.getElementById("sfError").textContent = "";
   document.getElementById("sessionForm").classList.remove("hidden");
   document.getElementById("sessionForm").scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -970,7 +975,7 @@ function saveSessionForm() {
   const subId = Number(document.getElementById("sfSubject").value);
   const sub = subjects.find(x => x.id === subId) || (existing && { id: existing.subjectId, name: existing.subjectName, color: existing.color });
   if (!sub) { err.textContent = "Ders seç."; return; }
-  const data = { subjectId: sub.id, subjectName: sub.name, color: sub.color, start, end, duration, date: dateKey(new Date(start)) };
+  const data = { subjectId: sub.id, subjectName: sub.name, color: sub.color, start, end, duration, date: dateKey(new Date(start)), note: document.getElementById("sfNote").value.trim() };
   let saved;
   if (existing) saved = Object.assign(existing, data, { edited: true });
   else sessions.push(saved = { id: Date.now(), ...data, manual: true });
