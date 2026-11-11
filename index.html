@@ -26,6 +26,11 @@
     .active-time { font-size: 18px; font-weight: 700; color: #CAF0F8; font-variant-numeric: tabular-nums; min-width: 80px; }
     .stop-btn { background: #0077B6; color: #fff; border: none; border-radius: 8px; padding: 6px 14px; cursor: pointer; font-weight: 600; font-size: 13px; }
     .stop-btn:hover { background: #005f9e; }
+    .active-bar { flex-wrap: wrap; }
+    .active-note { flex-basis: 100%; background: #020d18; border: 1px solid #0a3a5c; color: #ADE8F4; border-radius: 8px; padding: 6px 10px; font-size: 13px; }
+    .active-note::placeholder { color: #4a7a9b; }
+    .start-btn { background: transparent; border: 1px solid #0096C7; color: #90E0EF; }
+    .start-btn:hover { background: #031a2e; }
 
     /* NAV */
     .nav { display: flex; gap: 4px; padding: 10px 20px; background: rgba(3,20,40,0.9); border-bottom: 1px solid #0a3a5c; }
@@ -244,6 +249,7 @@
       <span class="active-label" id="activeLabel"></span>
       <span class="active-time" id="activeTime">0d 0sn</span>
       <button class="stop-btn" onclick="stopTimer()">■ Durdur</button>
+      <input class="active-note" id="activeNoteInput" maxlength="200" placeholder="Neye çalışıyorsun? (isteğe bağlı)" onchange="saveActiveNote()" onkeydown="if(event.key==='Enter')this.blur()" />
     </div>
   </div>
 
@@ -292,6 +298,7 @@
         </div>
         <div class="session-form-actions">
           <button class="add-btn" onclick="saveSessionForm()">Kaydet</button>
+          <button class="add-btn start-btn" id="sfStartTimer" onclick="startFromForm()" title="Saatleri boş ver, şu andan itibaren süre tutulsun">▶ Süreyi başlat</button>
           <button class="cancel-btn" onclick="closeSessionForm()">Vazgeç</button>
           <span class="form-error" id="sfError"></span>
         </div>
@@ -373,6 +380,7 @@ let sessions = [];
 let subjects = [];
 let activeSub = null;
 let timerStart = null;
+let activeNote = "";       // çalışan kronometrenin notu (neye çalışıldığı)
 let timerInterval = null;
 let heartbeatInterval = null;
 let friendInterval = null;
@@ -652,19 +660,20 @@ async function logout() {
 // Sayfa yenilense, başka cihazda başlatılsa ya da durdurulsa da burası ona uyar.
 function syncActiveTimer(active) {
   if (active && active.subjectId !== undefined) {
-    if (activeSub && timerStart === active.start) return;
+    if (activeSub && timerStart === active.start) { setActiveNote(active.note || ""); return; }
     const sub = subjects.find(s => s.id === active.subjectId) || { id: active.subjectId, name: active.subjectName, color: active.color };
-    startTimer(sub, active.start, true);
+    startTimer(sub, active.start, true, active.note || "");
   } else if (!active && activeSub) {
     clearLocalTimer(); // başka cihazda durduruldu; oturumu o cihaz kaydetti
   }
 }
 
 // TIMER
-function startTimer(sub, start = Date.now(), fromOtherDevice = false) {
+function startTimer(sub, start = Date.now(), fromOtherDevice = false, note = "") {
   if (activeSub) fromOtherDevice ? clearLocalTimer() : stopTimer();
   activeSub = sub;
   timerStart = start;
+  setActiveNote(note);
   updateTimerDisplay();
   document.getElementById("activeBar").classList.remove("hidden");
   document.getElementById("activeDot").style.background = sub.color;
@@ -677,11 +686,13 @@ function startTimer(sub, start = Date.now(), fromOtherDevice = false) {
 
 function stopTimer() {
   if (!activeSub || !timerStart) return;
+  activeNote = document.getElementById("activeNoteInput").value.trim();
   const end = Date.now();
   const duration = Math.floor((end - timerStart) / 1000);
   if (duration >= 10) {
     // Kimlik başlangıç zamanı: iki cihaz aynı anda durdursa bile tek oturum yazılır
     const s = { id: timerStart, subjectId: activeSub.id, subjectName: activeSub.name, color: activeSub.color, start: timerStart, end, duration, date: dateKey(new Date(timerStart)) };
+    if (activeNote) s.note = activeNote;
     sessions.push(s);
     saveSession(s);
   }
@@ -695,6 +706,7 @@ function clearLocalTimer() {
   clearInterval(timerInterval);
   clearInterval(heartbeatInterval);
   activeSub = null; timerStart = null;
+  setActiveNote("");
   document.getElementById("activeBar").classList.add("hidden");
   renderSubjectGrid();
 }
@@ -706,7 +718,21 @@ function updateTimerDisplay() {
 
 function sendHeartbeat() {
   if (!activeSub) return;
-  setActive({ subjectId: activeSub.id, subjectName: activeSub.name, color: activeSub.color, start: timerStart, alive: Date.now() });
+  setActive({ subjectId: activeSub.id, subjectName: activeSub.name, color: activeSub.color, start: timerStart, alive: Date.now(), note: activeNote });
+}
+
+// Not kutusunu günceller; kişi o an yazıyorsa yazdığının üstüne yazmaz
+function setActiveNote(note) {
+  const input = document.getElementById("activeNoteInput");
+  if (document.activeElement === input && activeSub) return;
+  activeNote = note;
+  input.value = note;
+}
+// Çalışırken yazılan not hemen kaydedilir, diğer cihazlar da görür
+function saveActiveNote() {
+  if (!activeSub) return;
+  activeNote = document.getElementById("activeNoteInput").value.trim();
+  sendHeartbeat();
 }
 
 // RENDER
@@ -950,6 +976,7 @@ function openSessionForm(id) {
     document.getElementById("sfEnd").value = timeStr(end);
   }
   document.getElementById("sessionFormTitle").textContent = s ? "Oturumu düzenle" : "Oturum ekle";
+  document.getElementById("sfStartTimer").classList.toggle("hidden", !!s);
   document.getElementById("sfNote").value = s && s.note ? s.note : "";
   document.getElementById("sfError").textContent = "";
   document.getElementById("sessionForm").classList.remove("hidden");
@@ -982,6 +1009,16 @@ function saveSessionForm() {
   closeSessionForm();
   saveSession(saved);
   render();
+}
+
+// Formda seçilen ders ve notla kronometreyi şimdi başlatır (saatler kullanılmaz)
+function startFromForm() {
+  const sub = subjects.find(x => x.id === Number(document.getElementById("sfSubject").value));
+  if (!sub) { document.getElementById("sfError").textContent = "Ders seç."; return; }
+  const note = document.getElementById("sfNote").value.trim();
+  closeSessionForm();
+  if (viewDate !== getToday()) goToday();
+  startTimer(sub, Date.now(), false, note);
 }
 
 // SUBJECTS VIEW
