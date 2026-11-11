@@ -29,8 +29,8 @@
     .active-bar { flex-wrap: wrap; }
     .active-note { flex-basis: 100%; background: #020d18; border: 1px solid #0a3a5c; color: #ADE8F4; border-radius: 8px; padding: 6px 10px; font-size: 13px; }
     .active-note::placeholder { color: #4a7a9b; }
-    .start-btn { background: transparent; border: 1px solid #0096C7; color: #90E0EF; }
-    .start-btn:hover { background: #031a2e; }
+    .add-btn.start-btn { background: transparent; border: 1px solid #0096C7; color: #90E0EF; }
+    .add-btn.start-btn:hover { background: #031a2e; }
 
     /* NAV */
     .nav { display: flex; gap: 4px; padding: 10px 20px; background: rgba(3,20,40,0.9); border-bottom: 1px solid #0a3a5c; }
@@ -175,6 +175,12 @@
     .session-row:hover { border-color: #0077B6; }
     .session-note { font-size: 13px; color: #6fa3c4; margin-top: 4px; overflow-wrap: anywhere; }
     .session-form-note { grid-column: 1 / -1; }
+    .session-form-dur { grid-column: span 2; }
+    .dur-inputs { display: flex; gap: 8px; align-items: center; color: #4a7a9b; font-size: 13px; }
+    .dur-inputs .input { width: 72px; }
+    .form-mode { display: inline-flex; border: 1px solid #0a3a5c; border-radius: 8px; overflow: hidden; margin-bottom: 12px; }
+    .form-mode button { background: transparent; border: none; color: #4a7a9b; padding: 6px 12px; font-size: 12px; cursor: pointer; }
+    .form-mode button.active { background: #0077B6; color: #fff; }
     .session-manual { font-size: 11px; color: #4a7a9b; border: 1px solid #0a3a5c; border-radius: 6px; padding: 0 5px; margin-left: 6px; font-weight: 400; }
     .friend-streak { font-size: 12px; color: #ffb347; margin-left: 4px; }
 
@@ -290,10 +296,20 @@
       </div>
       <div class="session-form hidden" id="sessionForm">
         <div class="session-form-title" id="sessionFormTitle">Oturum ekle</div>
+        <div class="form-mode">
+          <button id="sfModeRange" onclick="setFormMode('range')">Saat aralığı</button>
+          <button id="sfModeDur" onclick="setFormMode('duration')">Sadece süre</button>
+        </div>
         <div class="session-form-grid">
           <label>Ders<select class="input" id="sfSubject"></select></label>
-          <label>Başlangıç<input class="input" type="time" id="sfStart" /></label>
-          <label>Bitiş<input class="input" type="time" id="sfEnd" /></label>
+          <label class="sf-range">Başlangıç<input class="input" type="time" id="sfStart" /></label>
+          <label class="sf-range">Bitiş<input class="input" type="time" id="sfEnd" /></label>
+          <label class="session-form-dur sf-dur hidden">Ne kadar çalıştın?
+            <span class="dur-inputs">
+              <input class="input" type="number" inputmode="numeric" id="sfHours" min="0" max="16" placeholder="0" onkeydown="if(event.key==='Enter')saveSessionForm()" /> saat
+              <input class="input" type="number" inputmode="numeric" id="sfMins" min="0" max="59" placeholder="0" onkeydown="if(event.key==='Enter')saveSessionForm()" /> dakika
+            </span>
+          </label>
           <label class="session-form-note">Neye çalıştın? (isteğe bağlı)<input class="input" id="sfNote" maxlength="200" placeholder="örn: 3. ünite, soru çözümü" onkeydown="if(event.key==='Enter')saveSessionForm()" /></label>
         </div>
         <div class="session-form-actions">
@@ -389,6 +405,8 @@ let currentView = "today";
 let settings = {};          // { dailyGoal: saat, weeklyGoal: saat }
 let viewDate = null;        // Bugün sekmesinde gösterilen gün (YYYY-AA-GG)
 let editingSessionId = null;
+let formMode = "range";     // "range": başlangıç-bitiş, "duration": sadece süre
+try { if (localStorage.getItem("sfFormMode") === "duration") formMode = "duration"; } catch (e) {}
 
 function fmt(seconds) {
   const h = Math.floor(seconds / 3600), m = Math.floor((seconds % 3600) / 60), s = seconds % 60;
@@ -978,9 +996,22 @@ function openSessionForm(id) {
   document.getElementById("sessionFormTitle").textContent = s ? "Oturumu düzenle" : "Oturum ekle";
   document.getElementById("sfStartTimer").classList.toggle("hidden", !!s);
   document.getElementById("sfNote").value = s && s.note ? s.note : "";
+  document.getElementById("sfHours").value = s ? Math.floor(s.duration / 3600) : "";
+  document.getElementById("sfMins").value = s ? Math.round((s.duration % 3600) / 60) : "";
+  setFormMode(formMode);
   document.getElementById("sfError").textContent = "";
   document.getElementById("sessionForm").classList.remove("hidden");
   document.getElementById("sessionForm").scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+function setFormMode(mode) {
+  formMode = mode;
+  try { localStorage.setItem("sfFormMode", mode); } catch (e) {}
+  const dur = mode === "duration";
+  document.querySelectorAll(".sf-range").forEach(el => el.classList.toggle("hidden", dur));
+  document.querySelectorAll(".sf-dur").forEach(el => el.classList.toggle("hidden", !dur));
+  document.getElementById("sfModeRange").classList.toggle("active", !dur);
+  document.getElementById("sfModeDur").classList.toggle("active", dur);
+  document.getElementById("sfError").textContent = "";
 }
 function closeSessionForm() {
   editingSessionId = null;
@@ -988,14 +1019,34 @@ function closeSessionForm() {
 }
 function saveSessionForm() {
   const err = document.getElementById("sfError");
-  const startStr = document.getElementById("sfStart").value, endStr = document.getElementById("sfEnd").value;
-  if (!startStr || !endStr) { err.textContent = "Başlangıç ve bitiş saatini gir."; return; }
   const existing = editingSessionId ? sessions.find(x => x.id === editingSessionId) : null;
   const dayKey = existing ? existing.date : viewDate;
-  const [sh, sm] = startStr.split(":").map(Number), [eh, em] = endStr.split(":").map(Number);
-  const start = parseKey(dayKey).setHours(sh, sm, 0, 0);
-  let end = parseKey(dayKey).setHours(eh, em, 0, 0);
-  if (end <= start) end += 24 * 3600 * 1000; // gece yarısını geçen oturum
+  let start, end;
+  if (formMode === "duration") {
+    const h = Number(document.getElementById("sfHours").value || 0), m = Number(document.getElementById("sfMins").value || 0);
+    const ms = Math.round((h * 60 + m) * 60) * 1000;
+    if (!(h >= 0 && m >= 0) || ms <= 0) { err.textContent = "Kaç saat / dakika çalıştığını gir."; return; }
+    if (existing) {
+      // Düzenlemede başlangıç aynı kalır, süre değişir
+      start = existing.start; end = start + ms;
+    } else if (dayKey === getToday()) {
+      // Bugün: şu an bitmiş sayılır
+      end = Date.now(); start = end - ms;
+      if (start < parseKey(dayKey).getTime()) { err.textContent = "Bugün henüz bu kadar zaman geçmedi. Saat aralığıyla ekle."; return; }
+    } else {
+      // Geçmiş gün: o günün son oturumundan sonra, oturum yoksa 09:00'dan başlar
+      const ends = sessions.filter(x => x.date === dayKey).map(x => x.end);
+      start = ends.length ? Math.max(...ends) : parseKey(dayKey).setHours(9, 0, 0, 0);
+      end = start + ms;
+    }
+  } else {
+    const startStr = document.getElementById("sfStart").value, endStr = document.getElementById("sfEnd").value;
+    if (!startStr || !endStr) { err.textContent = "Başlangıç ve bitiş saatini gir."; return; }
+    const [sh, sm] = startStr.split(":").map(Number), [eh, em] = endStr.split(":").map(Number);
+    start = parseKey(dayKey).setHours(sh, sm, 0, 0);
+    end = parseKey(dayKey).setHours(eh, em, 0, 0);
+    if (end <= start) end += 24 * 3600 * 1000; // gece yarısını geçen oturum
+  }
   const duration = Math.round((end - start) / 1000);
   if (duration > 16 * 3600) { err.textContent = "Oturum 16 saatten uzun olamaz."; return; }
   if (end > Date.now() + 60 * 1000) { err.textContent = "Bitiş saati gelecekte olamaz."; return; }
