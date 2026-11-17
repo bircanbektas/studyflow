@@ -150,6 +150,9 @@
     .today-link { background: transparent; border: none; color: #48CAE4; cursor: pointer; font-size: 12px; text-decoration: underline; }
     .streak-badge { font-size: 14px; font-weight: 700; color: #ffb347; background: #1a1205; border: 1px solid #5c3a0a; padding: 6px 12px; border-radius: 20px; white-space: nowrap; }
     .streak-badge.cold { color: #4a7a9b; background: #031525; border-color: #0a3a5c; }
+    .streak-wrap { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+    .revive-btn { font-size: 12px; font-weight: 600; color: #ff8fa3; background: #1f0a12; border: 1px solid #6b2236; padding: 5px 10px; border-radius: 20px; cursor: pointer; white-space: nowrap; }
+    .revive-btn:hover { background: #2c0f1a; }
     .goal-wrap { margin-bottom: 20px; }
     .goal-text { display: flex; justify-content: space-between; font-size: 12px; color: #4a7a9b; margin-bottom: 6px; gap: 8px; }
     .goal-text b { color: #90E0EF; }
@@ -280,7 +283,10 @@
           <div class="section-sub" style="margin-top:6px">Toplam: <b id="todayTotal" style="color:#48CAE4">0sn</b>
             <button class="today-link hidden" id="backToToday" onclick="goToday()">bugüne dön</button></div>
         </div>
-        <span class="streak-badge" id="streakBadge"></span>
+        <div class="streak-wrap">
+          <span class="streak-badge" id="streakBadge"></span>
+          <button class="revive-btn hidden" id="reviveBtn" onclick="reviveStreak()"></button>
+        </div>
       </div>
       <div class="goal-wrap" id="dayGoal"></div>
       <div class="subject-grid" id="subjectGrid"></div>
@@ -403,6 +409,8 @@ let friendInterval = null;
 let selectedColor = COLORS[0];
 let currentView = "today";
 let settings = {};          // { dailyGoal: saat, weeklyGoal: saat }
+let revived = {};           // canlandırılan günler: { "YYYY-AA-GG": hakkın kullanıldığı an }
+const REVIVES_PER_MONTH = 3;
 let viewDate = null;        // Bugün sekmesinde gösterilen gün (YYYY-AA-GG)
 let editingSessionId = null;
 let formMode = "range";     // "range": başlangıç-bitiş, "duration": sadece süre
@@ -652,6 +660,7 @@ function applyProfile(p, syncTimer) {
   subjects = Object.values(p.subjects || {}).sort((a, b) => a.id - b.id);
   const goalsChanged = JSON.stringify(settings) !== JSON.stringify(p.settings || {});
   settings = p.settings || {};
+  revived = p.revived || {};
   if (goalsChanged) {
     document.getElementById("dailyGoalInput").value = settings.dailyGoal || "";
     document.getElementById("weeklyGoalInput").value = settings.weeklyGoal || "";
@@ -664,7 +673,7 @@ function cleanup() {
   if (unsubFriends) unsubFriends();
   unsubMe = unsubFriends = null;
   clearInterval(friendInterval);
-  uid = null; userName = ""; sessions = []; subjects = []; settings = {}; friendsData = {};
+  uid = null; userName = ""; sessions = []; subjects = []; settings = {}; revived = {}; friendsData = {};
 }
 
 async function logout() {
@@ -847,7 +856,7 @@ function renderStats() {
   document.getElementById("statTotal").textContent = fmt(totalSeconds());
   document.getElementById("statToday").textContent = fmt(todaySeconds());
   document.getElementById("statCount").textContent = sessions.length;
-  document.getElementById("statBestStreak").textContent = `${bestStreak(sessions)} gün`;
+  document.getElementById("statBestStreak").textContent = `${bestStreak(sessions, revived)} gün`;
   const maxT = Math.max(...subjects.map(sub => sessions.filter(s => s.subjectId === sub.id).reduce((a,s)=>a+s.duration,0)), 1);
   document.getElementById("subjectBars").innerHTML = subjects
     .map(sub => ({ ...sub, total: sessions.filter(s=>s.subjectId===sub.id).reduce((a,s)=>a+s.duration,0) }))
@@ -901,24 +910,68 @@ function renderDayHeader() {
     : d.toLocaleDateString("tr-TR", { weekday:"long", day:"numeric", month:"long" });
   document.getElementById("nextDayBtn").disabled = isToday;
   document.getElementById("backToToday").classList.toggle("hidden", isToday);
-  const streak = streakOf(sessions);
+  const streak = streakOf(sessions, revived);
+  const left = revivesLeft();
   const badge = document.getElementById("streakBadge");
   badge.textContent = streak > 0 ? `🔥 ${streak} gün seri` : "Seri yok";
   badge.classList.toggle("cold", streak === 0);
-  badge.title = streak > 0 && !todaySessions().length ? "Bugün çalışırsan seri devam eder" : "";
+  badge.title = (streak > 0 && !todaySessions().length ? "Bugün çalışırsan seri devam eder. " : "")
+    + `Bu ay ${left} seri canlandırma hakkın var.`;
+  const btn = document.getElementById("reviveBtn");
+  const canRevive = !!revivableDay() && left > 0;
+  btn.classList.toggle("hidden", !canRevive);
+  btn.textContent = `❤️‍🩹 Seriyi canlandır (${left} hak)`;
 }
 
-// SERİ: üst üste en az bir oturum olan günler
-function streakOf(list) {
-  const days = new Set(list.map(s => s.date));
+// SERİ CANLANDIRMA: dün çalışılmadıysa ayda 3 hakla o gün seriye sayılabilir
+function revivesLeft() {
+  const month = getToday().slice(0, 7);
+  const used = Object.values(revived).filter(ts => dateKey(new Date(ts)).slice(0, 7) === month).length;
+  return Math.max(0, REVIVES_PER_MONTH - used);
+}
+// Dün boşsa ve önceki gün seri sürüyorsa canlandırılabilecek gün (dün); yoksa null
+function revivableDay() {
+  const days = streakDays(sessions, revived);
   const d = new Date();
-  if (!days.has(dateKey(d))) d.setDate(d.getDate() - 1); // bugün henüz çalışılmadıysa seri dünden sayılır
+  d.setDate(d.getDate() - 1);
+  const yesterday = dateKey(d);
+  d.setDate(d.getDate() - 1);
+  return !days.has(yesterday) && days.has(dateKey(d)) ? yesterday : null;
+}
+function reviveStreak() {
+  const day = revivableDay(), left = revivesLeft();
+  if (!day || left <= 0) return;
+  const before = parseKey(day);
+  before.setDate(before.getDate() - 1);
+  const lost = runEndingAt(streakDays(sessions, revived), before);
+  if (!confirm(`Dün çalışmadığın için ${lost} günlük serin bozuldu.\n1 hak kullanıp seriyi kurtarmak ister misin? (Bu ay ${left - 1} hakkın kalır)`)) return;
+  const now = Date.now();
+  revived = { ...revived, [day]: now };
+  render();
+  userRef().update(new FieldPath("revived", day), now).catch(saveFailed);
+  showToast(`❤️‍🩹 Seri kurtarıldı! Bu ay ${left - 1} hakkın kaldı.`);
+}
+
+// SERİ: üst üste en az bir oturum olan (ya da canlandırılan) günler
+function streakDays(list, rev) {
+  const days = new Set(list.map(s => s.date));
+  Object.keys(rev || {}).forEach(k => days.add(k));
+  return days;
+}
+function runEndingAt(days, date) {
+  const d = new Date(date);
   let n = 0;
   while (days.has(dateKey(d))) { n++; d.setDate(d.getDate() - 1); }
   return n;
 }
-function bestStreak(list) {
-  const days = [...new Set(list.map(s => s.date))].sort();
+function streakOf(list, rev) {
+  const days = streakDays(list, rev);
+  const d = new Date();
+  if (!days.has(dateKey(d))) d.setDate(d.getDate() - 1); // bugün henüz çalışılmadıysa seri dünden sayılır
+  return runEndingAt(days, d);
+}
+function bestStreak(list, rev) {
+  const days = [...streakDays(list, rev)].sort();
   let best = 0, run = 0, prev = null;
   days.forEach(key => {
     if (prev) {
@@ -1153,7 +1206,7 @@ function renderFriends() {
       <div class="friend-header">
         <div class="friend-name">
           <span class="online-dot" style="background:${isActive?'#48CAE4':'#1a3a5c'}"></span>
-          @${esc(name)}${streakOf(fSessions) > 1 ? `<span class="friend-streak">🔥 ${streakOf(fSessions)}</span>` : ""}
+          @${esc(name)}${streakOf(fSessions, udata.revived) > 1 ? `<span class="friend-streak">🔥 ${streakOf(fSessions, udata.revived)}</span>` : ""}
         </div>
         <div class="friend-total">${fmt(fTotal)} bugün</div>
       </div>
